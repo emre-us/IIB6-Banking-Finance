@@ -1,0 +1,39 @@
+# Quarto
+/.quarto/
+_book/
+_site/
+*.html
+*.pdf
+*.epub
+
+# R
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+*.pyc
+.env
+venv/
+env/
+
+# LaTeX
+*.aux
+*.log
+*.out
+*.toc
+*.tex
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

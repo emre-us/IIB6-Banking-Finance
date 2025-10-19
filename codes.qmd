@@ -1,0 +1,1025 @@
+# Codes
+
+## Python
+
+### Supervision 1
+
+#### Question 1
+
+```{r}
+#| label: setup-python
+#| include: false
+
+library(reticulate)
+
+# Tell reticulate which Python to use
+use_python("/Library/Developer/CommandLineTools/usr/bin/python3", required = TRUE)
+
+# Verify it's using the correct Python
+# py_config()
+```
+
+[Python Setup]{.underline}: We will use the libraries `numpy` and `pandas` and set up the information given in the question.
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Given parameters
+discount_rate = 0.15
+cash_flow = 10  # in millions
+growth_rate = 0.05
+
+output = f"""{'='*60}
+DISCOUNTING CASH FLOWS ANALYSIS
+{'='*60}
+
+Discount Rate: {discount_rate:.1%}
+Annual Cash Flow: ${cash_flow} million
+Growth Rate (when applicable): {growth_rate:.1%}
+"""
+print(output)
+```
+\
+
+##### Q1(a)
+
+```{python}
+# Part a: Single payment next year
+pv_a = cash_flow / (1 + discount_rate)
+
+output = f"""
+Single Payment Next Year
+{'-'*40}
+PV = ${cash_flow} million / {1 + discount_rate}
+PV = ${pv_a:.2f} million
+"""
+print(output)
+```
+\
+
+##### Q1(b)
+
+```{python}
+# Part b: Perpetuity
+pv_b = cash_flow / discount_rate
+
+output = f"""
+Perpetuity
+{'-'*40}
+PV = ${cash_flow} million / {discount_rate}
+PV = ${pv_b:.2f} million
+"""
+print(output)
+```
+\
+
+##### Q1(c)
+
+```{python}
+# Part c: 15-year annuity (as difference of two perpetuities)
+years_c = 15
+perpetuity_now = cash_flow / discount_rate
+perpetuity_at_year_15 = (1 / (1 + discount_rate)**years_c) * (cash_flow / discount_rate)
+pv_c = perpetuity_now - perpetuity_at_year_15
+
+output = f"""
+15-Year Annuity
+{'-'*40}
+Perpetuity starting now: ${perpetuity_now:.2f} million
+Perpetuity starting year 16 (PV): ${perpetuity_at_year_15:.2f} million
+PV = ${perpetuity_now:.2f} - ${perpetuity_at_year_15:.2f}
+PV = ${pv_c:.2f} million
+"""
+print(output)
+```
+\
+
+##### Q1(d)
+
+```{python}
+# Part d: 15 years flat, then growing perpetuity
+# First cash flow of growing perpetuity is CF * (1 + g), not CF
+first_growth_cf = cash_flow * (1 + growth_rate)
+growing_perpetuity_at_year_15 = first_growth_cf / (discount_rate - growth_rate)
+growing_perpetuity_pv = growing_perpetuity_at_year_15 / (1 + discount_rate)**years_c
+
+pv_d = pv_c + growing_perpetuity_pv
+
+# Common mistake (for reference)
+incorrect_pv = pv_c + (cash_flow/(discount_rate-growth_rate)) / (1+discount_rate)**years_c
+
+output = f"""
+Part (d): 15 Years + Growing Perpetuity
+{'-'*40}
+Value from first 15 years: ${pv_c:.2f} million
+First growing cash flow (year 16): ${first_growth_cf:.2f} million
+Growing perpetuity value at year 15: ${growing_perpetuity_at_year_15:.2f} million
+Growing perpetuity PV at year 0: ${growing_perpetuity_pv:.2f} million
+Total PV = ${pv_c:.2f} + ${growing_perpetuity_pv:.2f}
+Total PV = ${pv_d:.2f} million
+
+Common mistake (using CF instead of CF*(1+g)): ${incorrect_pv:.2f} million
+Difference: ${pv_d - incorrect_pv:.2f} million
+"""
+print(output)
+```
+\
+
+##### Q1(e)(i)
+
+```{python}
+# year-by-year discounting
+years_vec = list(range(1, 31))
+cash_flows = []
+
+# Years 1-15: constant $10 million
+for year in range(1, 16):
+    cash_flows.append(cash_flow)
+
+# Years 16-30: growing at 5%
+for year in range(16, 31):
+    years_of_growth = year - 15
+    cf = cash_flow * (1 + growth_rate)**years_of_growth
+    cash_flows.append(cf)
+
+# Calculate PV year by year
+pv_year_by_year = sum([cf/(1+discount_rate)**t for cf, t in zip(cash_flows, years_vec)])
+
+output = f"""
+Year-by-Year Calculation
+{'-'*40}
+PV (year-by-year): ${pv_year_by_year:.2f} million
+"""
+print(output)
+```
+\
+
+##### Q1(e)(ii)
+
+```{python}
+# 30 years total (15 flat + 15 growing)
+years_total = 30
+years_growth = years_total - years_c  # 15 years of growth
+
+# Calculate what the cash flow would be at year 31 (if it continued)
+cash_flow_year_31 = cash_flow * (1 + growth_rate)**16
+
+# Value of lost perpetuity starting year 31
+lost_perpetuity_at_year_30 = cash_flow_year_31 / (discount_rate - growth_rate)
+lost_perpetuity_pv = lost_perpetuity_at_year_30 / (1 + discount_rate)**years_total
+
+pv_e = pv_d - lost_perpetuity_pv
+
+output = f"""
+Part (e): 30-Year Project (15 flat + 15 growing)
+{'-'*40}
+PV if growth continued forever: ${pv_d:.2f} million
+Cash flow at year 31 (if continued): ${cash_flow_year_31:.2f} million
+Lost perpetuity value at year 30: ${lost_perpetuity_at_year_30:.2f} million
+Lost perpetuity PV at year 0: ${lost_perpetuity_pv:.2f} million
+Total PV = ${pv_d:.2f} - ${lost_perpetuity_pv:.2f}
+Total PV = ${pv_e:.2f} million
+
+Loss from termination at year 30: ${pv_d - pv_e:.2f} million
+"""
+print(output)
+```
+
+
+\pagebreak
+
+#### Question 2
+
+Let's first set up the income statement in Python and R before we start answering each part.
+
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Corporate tax rate
+tax_rate = 0.35
+
+# Create data for existing business
+existing_biz = pd.DataFrame({
+    'Year': [2007, 2008, 2009, 2010, 2011],
+    'Sales': [360, 492, 840, 942, 720],
+    'COGS': [156, 210, 360, 408, 312],
+    'S_A': [60, 78, 132, 150, 114],
+    'Depreciation': [18, 18, 18, 18, 18],
+    'Interest': [30, 24, 24, 18, 18]
+})
+
+# Create data for incremental (new machines)
+incremental = pd.DataFrame({
+    'Year': [2007, 2008, 2009, 2010, 2011],
+    'Sales': [76, 98, 164, 132, 99],
+    'COGS': [19, 15, 21, 26, 22],
+    'S_A': [12, 14, 15, 14, 12],
+    'Depreciation': [4, 4, 4, 4, 4],
+    'Interest': [6, 5, 5, 4, 4]
+})
+
+```
+
+
+##### Q2(a)(i)
+
+```{python}
+# Calculate metrics for existing business
+existing_biz['EBITDA'] = (existing_biz['Sales'] - 
+                                existing_biz['COGS'] - 
+                                existing_biz['S_A'])
+existing_biz['EBIT'] = existing_biz['EBITDA'] - existing_biz['Depreciation']
+existing_biz['EBIAT'] = existing_biz['EBIT'] * (1 - tax_rate)
+existing_biz['Taxable_Income'] = existing_biz['EBIT'] - existing_biz['Interest']
+existing_biz['Tax'] = existing_biz['Taxable_Income'] * tax_rate
+existing_biz['Net_Income'] = existing_biz['Taxable_Income'] - existing_biz['Tax']
+
+# Display results
+output_cols = ['Year', 'EBITDA', 'EBIT', 'EBIAT', 'Taxable_Income', 'Tax', 'Net_Income']
+display_df = existing_biz[output_cols].copy()
+
+# Format for display
+for col in output_cols[1:]:
+    display_df[col] = display_df[col].apply(lambda x: f"{x:,.0f}")
+
+output = f"""
+Calculations for Existing Business
+{'-'*70}
+
+{display_df.to_string(index=False)}
+"""
+print(output)
+```
+\
+
+##### Q2(a)(ii)
+
+```{python}
+# Calculate metrics for incremental impact
+incremental['EBITDA'] = (incremental['Sales'] - 
+                         incremental['COGS'] - 
+                         incremental['S_A'])
+incremental['EBIT'] = incremental['EBITDA'] - incremental['Depreciation']
+incremental['EBIAT'] = incremental['EBIT'] * (1 - tax_rate)
+incremental['Taxable_Income'] = incremental['EBIT'] - incremental['Interest']
+incremental['Tax'] = incremental['Taxable_Income'] * tax_rate
+incremental['Net_Income'] = incremental['Taxable_Income'] - incremental['Tax']
+
+# Display results
+display_df_inc = incremental[output_cols].copy()
+
+# Format for display
+for col in output_cols[1:]:
+    display_df_inc[col] = display_df_inc[col].apply(lambda x: f"{x:,.0f}")
+
+output = f"""
+Calculations for New Machines (Incremental Impact)
+{'-'*70}
+
+{display_df_inc.to_string(index=False)}
+"""
+print(output)
+```
+\
+
+##### Q2(d)
+
+```{python}
+# Calculate incremental free cash flows for 2006-2011
+
+# Given parameters
+initial_capex = 200  # million
+initial_nwc = 5  # million
+salvage_value = 50  # million
+tax_rate = 0.35
+nwc_percent = 0.20
+
+# Sales from incremental project (for NWC calculation)
+sales = incremental['Sales'].values
+
+# Calculate NWC levels (end of each year)
+nwc_levels = [0, initial_nwc]  # Start of 2006, End of 2006
+for sale in sales:
+    nwc_levels.append(nwc_percent * sale)
+
+# Calculate changes in NWC
+delta_nwc = []
+for i in range(len(nwc_levels) - 1):
+    delta_nwc.append(nwc_levels[i+1] - nwc_levels[i])
+
+# Calculate book value and tax on salvage
+annual_depreciation = incremental['Depreciation'].iloc[0]  # $4M per year
+years_of_depreciation = 5
+accumulated_depreciation = annual_depreciation * years_of_depreciation
+book_value = initial_capex - accumulated_depreciation
+gain_loss_on_sale = salvage_value - book_value
+tax_on_sale_amount = gain_loss_on_sale * tax_rate
+
+# Create cash flow table
+years = [2006, 2007, 2008, 2009, 2010, 2011]
+ebiat_values = [0] + list(incremental['EBIAT'].values)
+depreciation_values = [0] + list(incremental['Depreciation'].values)
+
+# and create initial dataframe with these
+cf_df = pd.DataFrame({
+    'Year': years,
+    'EBIAT': ebiat_values,
+    'Depreciation': depreciation_values
+})
+
+# Calculate Total Investment for each year
+# 2006: Initial Investment + Initial NWC change
+# 2007-2010: Change in NWC=NWC Recovery - Terminal Value
+# 2011: Change in NWC - Recovery of NWC - Salvage Value (after tax)
+total_investment = []
+for i, year in enumerate(years):
+    if year == 2006:
+      # initial CapEx + Initial NWC Change
+        inv = initial_capex + delta_nwc[i]
+    elif year == 2011:
+        # DeltaNWC for 2011 - Recovery of final NWC level - After-tax salvage
+        recovery = nwc_levels[-1]  # Final NWC level to be recovered
+        tax_benefit = -tax_on_sale_amount  # Negative gain = tax benefit
+        terminal_value = salvage_value + tax_benefit
+        inv = delta_nwc[i] - recovery - terminal_value
+    else:
+      # Just Delta_NWC
+        inv = delta_nwc[i]
+    total_investment.append(inv)
+    
+cf_df['Total_Investment'] = total_investment
+cf_df['Free_Cash_Flow'] = (cf_df['EBIAT'] + cf_df['Depreciation'] - 
+                            cf_df['Total_Investment'])
+
+# Build output
+output_lines = [
+    "=" * 80,
+    "INCREMENTAL FREE CASH FLOW CALCULATION",
+    "=" * 80,
+    "",
+    "NWC LEVELS AND CHANGES:",
+    "-" * 80
+]
+
+for i in range(len(years)):
+    if years[i] == 2011:
+        recovery = nwc_levels[-1]
+        output_lines.append(f"  {years[i]}: Beg NWC = ${nwc_levels[i]:.1f}M, " +
+                           f"End NWC = ${nwc_levels[i+1]:.1f}M, " +
+                           f"ΔNWC = ${delta_nwc[i]:.1f}M, Recovery = ${recovery:.1f}M")
+    else:
+        output_lines.append(f"  {years[i]}: Beg NWC = ${nwc_levels[i]:.1f}M, " +
+                           f"End NWC = ${nwc_levels[i+1]:.1f}M, " +
+                           f"ΔNWC = ${delta_nwc[i]:.1f}M")
+
+output_lines.extend([
+    "",
+    "TERMINAL VALUE CALCULATION (2011):",
+    "-" * 80,
+    f"  Book Value = ${initial_capex} - ${accumulated_depreciation} = ${book_value}M",
+    f"  Salvage Value = ${salvage_value}M",
+    f"  Gain/(Loss) on Sale = ${salvage_value} - ${book_value} = ${gain_loss_on_sale}M",
+    f"  Tax on Sale = ${gain_loss_on_sale} × {tax_rate} = ${tax_on_sale_amount:.1f}M",
+    f"  After-tax Salvage = ${salvage_value} - ${tax_on_sale_amount:.1f} = ${salvage_value - tax_on_sale_amount:.1f}M",
+    f"  NWC Recovery = ${nwc_levels[-1]:.1f}M",
+    f"  Terminal Value = ${salvage_value - tax_on_sale_amount:.1f}M (salvage) + ${nwc_levels[-1]:.1f}M (NWC) included in calculation",
+    "",
+    "FREE CASH FLOW TABLE:",
+    "=" * 80,
+    "",
+    "Year | EBIAT | Depr | EBIAT+Depr | Investment | Free Cash Flow",
+    "-" * 80
+])
+
+for i in range(len(years)):
+    output_lines.append(
+        f"{years[i]} | ${cf_df['EBIAT'].iloc[i]:>5.0f} | ${cf_df['Depreciation'].iloc[i]:>4.0f} | " +
+        f"${cf_df['EBIAT'].iloc[i] + cf_df['Depreciation'].iloc[i]:>10.0f} | ${cf_df['Total_Investment'].iloc[i]:>10.1f} | ${cf_df['Free_Cash_Flow'].iloc[i]:>14.1f}"
+    )
+
+print("\n".join(output_lines))
+
+```
+\
+
+##### Q2(f)
+
+For the IRR calculation in Python we can either do it manually via root finding, or use `brentq` from `scipy` to find the roots, or use `npf.irr` - the IRR function of `numpy_financial`.
+
+```{python}
+# Calculate the Internal Rate of Return (IRR)
+
+import numpy as np
+from scipy.optimize import brentq
+
+# Get the free cash flows from part (d)
+# These should already exist in cf_df from part (d)
+cash_flows = cf_df['Free_Cash_Flow'].values
+
+# Define NPV function
+def npv_function(rate, cf):
+    """Calculate NPV for a given discount rate"""
+    times = np.arange(len(cf))
+    return np.sum(cf / (1 + rate)**times)
+
+# Calculate IRR using brentq (more robust root-finding)
+irr_value = brentq(npv_function, -0.99, 2.0, args=(cash_flows,))
+
+# Verify by calculating NPV at the IRR
+npv_at_irr = npv_function(irr_value, cash_flows)
+
+# Calculate NPV at different discount rates to show the concept
+test_rates = [0.00, 0.05, 0.10, 0.15, irr_value, 0.20, 0.25]
+npv_at_rates = [npv_function(rate, cash_flows) for rate in test_rates]
+
+# Build output
+output_lines = [
+    "",
+    "=" * 70,
+    "INTERNAL RATE OF RETURN (IRR) CALCULATION",
+    "=" * 70,
+    "",
+    "FREE CASH FLOWS:",
+    "-" * 70
+]
+
+for year, cf in zip(cf_df['Year'].values, cash_flows):
+    output_lines.append(f"  Year {year}: ${cf:>8.1f} million")
+
+output_lines.extend([
+    "",
+    "INTERNAL RATE OF RETURN:",
+    "=" * 70,
+    f"  IRR = {irr_value:.4f} or {irr_value*100:.2f}%",
+    "",
+    "VERIFICATION:",
+    "-" * 70,
+    f"  NPV at IRR = ${npv_at_irr:.6f} million ≈ $0",
+    "",
+    "NPV AT DIFFERENT DISCOUNT RATES:",
+    "-" * 70,
+    "  Discount Rate    NPV ($ millions)",
+    "  " + "-" * 40
+])
+
+for rate, npv in zip(test_rates, npv_at_rates):
+    if abs(rate - irr_value) < 0.0001:
+        output_lines.append(f"  {rate*100:>6.2f}%         ${npv:>8.2f}  ← IRR")
+    else:
+        output_lines.append(f"  {rate*100:>6.2f}%         ${npv:>8.2f}")
+
+# Compare to a 15% discount rate (from Question 1)
+npv_15 = npv_function(0.15, cash_flows)
+output_lines.extend([
+    "",
+    "COMPARISON TO 15% DISCOUNT RATE:",
+    "-" * 70
+])
+
+if irr_value > 0.15:
+    output_lines.extend([
+        f"  The IRR ({irr_value*100:.2f}%) is GREATER than 15%",
+        f"  NPV at 15% = ${npv_15:.2f} million (POSITIVE)",
+        "  → The project should be ACCEPTED at a 15% discount rate"
+    ])
+else:
+    output_lines.extend([
+        f"  The IRR ({irr_value*100:.2f}%) is LESS than 15%",
+        f"  NPV at 15% = ${npv_15:.2f} million (NEGATIVE)",
+        "  → The project should be REJECTED at a 15% discount rate"
+    ])
+
+print("\n".join(output_lines))
+```
+
+
+
+\pagebreak
+
+## R
+
+### Supervision 1
+
+#### Question 1
+
+We will use `tidyverse` library and set up the information given in the question. The set-up is as follows:
+
+```{r}
+#| label: r-setupQ1
+#| message: false
+#| echo: false
+
+library(tidyverse)
+
+# Given parameters
+discount_rate <- 0.15
+cash_flow <- 10  # in millions
+growth_rate <- 0.05
+
+output <- sprintf("%s\nDISCOUNTING CASH FLOWS ANALYSIS\n%s\n\nDiscount Rate: 
+                  %s\nAnnual Cash Flow: $%g million\nGrowth Rate (when applicable): %s\n",
+                  paste(rep("=", 60), collapse=""),
+                  paste(rep("=", 60), collapse=""),
+                  scales::percent(discount_rate, accuracy = 0.1),
+                  cash_flow,
+                  scales::percent(growth_rate, accuracy = 0.1))
+cat(output)
+```
+
+\
+
+##### Q1(a)
+
+```{r}
+#| label: r-Q1a
+#| message: false
+
+# Part a: Single payment next year
+pv_a <- cash_flow / (1 + discount_rate)
+
+output <- sprintf("\nSingle Payment Next Year\n%s\nPV = $%g million / %g\nPV 
+                  = $%.2f million\n",
+                  paste(rep("-", 40), collapse=""),
+                  cash_flow,
+                  1 + discount_rate,
+                  pv_a)
+cat(output)
+```
+\
+
+##### Q1(b)
+
+```{r}
+#| label: r-Q1b
+#| message: false
+
+# Part b: Perpetuity
+pv_b <- cash_flow / discount_rate
+
+output <- sprintf("\nPerpetuity\n%s
+PV = $%g million / %g
+PV = $%.2f million\n",
+                  paste(rep("-", 40), collapse=""),
+                  cash_flow,
+                  discount_rate,
+                  pv_b)
+cat(output)
+```
+\
+
+##### Q1(c)
+
+```{r}
+#| label: r-Q1c
+#| message: false
+
+# Part c: 15-year annuity (as difference of two perpetuities)
+years_c <- 15
+perpetuity_now <- cash_flow / discount_rate
+perpetuity_at_year_15 <- (1 / (1 + discount_rate)^years_c) * (cash_flow / discount_rate)
+pv_c <- perpetuity_now - perpetuity_at_year_15
+
+output <- sprintf("\n15-Year Annuity\n%s
+Perpetuity starting now: $%.2f million
+Perpetuity starting year 16 (PV): $%.2f million
+PV = $%.2f - $%.2f\nPV = $%.2f million\n",
+                  paste(rep("-", 40), collapse=""),
+                  perpetuity_now,
+                  perpetuity_at_year_15,
+                  perpetuity_now,
+                  perpetuity_at_year_15,
+                  pv_c)
+cat(output)
+```
+\
+
+##### Q1(d)
+
+```{r}
+#| label: r-Q1d
+#| message: false
+
+# Part d: 15 years flat, then growing perpetuity
+# First cash flow of growing perpetuity is CF * (1 + g), not CF
+first_growth_cf <- cash_flow * (1 + growth_rate)
+growing_perpetuity_at_year_15 <- first_growth_cf / (discount_rate - growth_rate)
+growing_perpetuity_pv <- growing_perpetuity_at_year_15 / (1 + discount_rate)^years_c
+
+pv_d <- pv_c + growing_perpetuity_pv
+
+# Common mistake (for reference)
+incorrect_pv <- pv_c + (cash_flow/(discount_rate-growth_rate)) / (1+discount_rate)^years_c
+
+output <- sprintf("\n15 Years + Growing Perpetuity\n%s\n
+Value from first 15 years: $%.2f million
+First growing cash flow (year 16): $%.2f million
+Growing perpetuity value at year 15: $%.2f million
+Growing perpetuity PV at year 0: $%.2f million
+Total PV = $%.2f + $%.2f
+Total PV = $%.2f million\n
+Common mistake (using CF instead of CF*(1+g)): $%.2f million
+Difference: $%.2f million\n",
+                  paste(rep("-", 40), collapse=""),
+                  pv_c,
+                  first_growth_cf,
+                  growing_perpetuity_at_year_15,
+                  growing_perpetuity_pv,
+                  pv_c,
+                  growing_perpetuity_pv,
+                  pv_d,
+                  incorrect_pv,
+                  pv_d - incorrect_pv)
+cat(output)
+```
+\
+
+##### Q1(e)(i)
+
+```{r}
+#| label: r-Q1e-i
+#| message: false
+
+# Verification for part (e) using year-by-year discounting
+years_vec <- 1:30
+cash_flows_vec <- numeric(30)
+
+# Years 1-15: constant $10 million
+cash_flows_vec[1:15] <- cash_flow
+
+# Years 16-30: growing at 5%
+for (year in 16:30) {
+  years_of_growth <- year - 15
+  cash_flows_vec[year] <- cash_flow * (1 + growth_rate)^years_of_growth
+}
+
+# Calculate PV year by year
+pv_year_by_year <- sum(cash_flows_vec / (1 + discount_rate)^years_vec)
+
+output <- sprintf("\nVerification: Year-by-Year Calculation\n%s\n
+PV (year-by-year): $%.2f million\n",
+                  paste(rep("-", 40), collapse=""),
+                  pv_year_by_year)
+cat(output)
+```
+\
+
+##### Q1(e)(ii)
+
+```{r}
+#| label: r-Q1e-ii
+#| message: false
+
+# 30 years total (15 flat + 15 growing)
+years_total <- 30
+years_growth <- years_total - years_c  # 15 years of growth
+
+# Calculate what the cash flow would be at year 31 (if it continued)
+cash_flow_year_31 <- cash_flow * (1 + growth_rate)^16
+
+# Value of lost perpetuity starting year 31
+lost_perpetuity_at_year_30 <- cash_flow_year_31 / (discount_rate - growth_rate)
+lost_perpetuity_pv <- lost_perpetuity_at_year_30 / (1 + discount_rate)^years_total
+
+pv_e <- pv_d - lost_perpetuity_pv
+
+output <- sprintf("\nPart (e): 30-Year Project (15 flat + 15 growing)\n%s
+PV if growth continued forever: $%.2f million
+Cash flow at year 31 (if continued): $%.2f million
+Lost perpetuity value at year 30: $%.2f million
+Lost perpetuity PV at year 0: $%.2f million
+Total PV = $%.2f - $%.2f\nTotal PV = $%.2f million
+\nLoss from termination at year 30: $%.2f million\n",
+                  paste(rep("-", 40), collapse=""),
+                  pv_d,
+                  cash_flow_year_31,
+                  lost_perpetuity_at_year_30,
+                  lost_perpetuity_pv,
+                  pv_d,
+                  lost_perpetuity_pv,
+                  pv_e,
+                  pv_d - pv_e)
+cat(output)
+```
+
+
+\pagebreak
+
+#### Question 2
+
+```{r}
+#| label: r-setupQ2
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+
+# Corporate tax rate
+tax_rate <- 0.35
+
+# Create data for existing business using data.frame
+existing_biz <- data.frame(
+  Year = c(2007, 2008, 2009, 2010, 2011),
+  Sales = c(360, 492, 840, 942, 720),
+  COGS = c(156, 210, 360, 408, 312),
+  S_A = c(60, 78, 132, 150, 114),
+  Depreciation = c(18, 18, 18, 18, 18),
+  Interest = c(30, 24, 24, 18, 18)
+)
+
+# Create data for incremental (new machines) using data.frame
+incremental <- data.frame(
+  Year = c(2007, 2008, 2009, 2010, 2011),
+  Sales = c(76, 98, 164, 132, 99),
+  COGS = c(19, 15, 21, 26, 22),
+  S_A = c(12, 14, 15, 14, 12),
+  Depreciation = c(4, 4, 4, 4, 4),
+  Interest = c(6, 5, 5, 4, 4)
+)
+
+```
+\
+
+##### Q2(a)(i)
+
+```{r}
+#| label: r-Q2a-i
+#| message: false
+#| warning: false
+
+# Calculate metrics for existing business
+existing_biz <- existing_biz %>%
+  mutate(
+    EBITDA = Sales - COGS - S_A,
+    EBIT = EBITDA - Depreciation,
+    EBIAT = EBIT * (1 - tax_rate),
+    Taxable_Income = EBIT - Interest,
+    Tax = Taxable_Income * tax_rate,
+    Net_Income = Taxable_Income - Tax
+  )
+
+# Display results
+existing_biz %>%
+  select(Year, EBITDA, EBIT, EBIAT, Taxable_Income, Tax, Net_Income) %>%
+  kable(format = "simple", 
+        digits = 0,
+        col.names = c("Year", "EBITDA", "EBIT", "EBIAT", 
+                      "Taxable Income", "Tax", "Net Income"))
+
+```
+\
+
+##### Q2(a)(ii)
+
+```{r}
+#| label: r-Q2a-ii
+#| message: false
+#| warning: false
+
+# Calculate metrics for incremental impact
+incremental <- incremental %>%
+  mutate(
+    EBITDA = Sales - COGS - S_A,
+    EBIT = EBITDA - Depreciation,
+    EBIAT = EBIT * (1 - tax_rate),
+    Taxable_Income = EBIT - Interest,
+    Tax = Taxable_Income * tax_rate,
+    Net_Income = Taxable_Income - Tax
+  )
+
+# Now we can use select since columns exist
+incremental %>%
+  select(Year, EBITDA, EBIT, EBIAT, Taxable_Income, Tax, Net_Income) %>%
+  kable(format = "simple", 
+        digits = 0,
+        col.names = c("Year", "EBITDA", "EBIT", "EBIAT", "Taxable Income", "Tax", "Net Income"),
+        row.names = FALSE)
+```
+\
+
+##### Q2(d)
+
+```{r}
+#| label: r-Q2d
+#| message: false
+#| warning: false
+
+# Calculate incremental free cash flows for 2006-2011
+
+# Given parameters
+initial_capex <- 200  # million
+initial_nwc <- 5  # million
+salvage_value <- 50  # million
+tax_rate <- 0.35
+nwc_percent <- 0.20
+
+# Sales from incremental project (for NWC calculation)
+sales <- incremental$Sales
+
+# Calculate NWC levels
+nwc_levels <- c(0, initial_nwc)  # Start of 2006, End of 2006
+for (sale in sales) {
+  nwc_levels <- c(nwc_levels, nwc_percent * sale)
+}
+
+# Calculate changes in NWC
+delta_nwc <- diff(nwc_levels)
+
+# Calculate book value and tax on salvage
+annual_depreciation <- incremental$Depreciation[1]  # $4M per year
+years_of_depreciation <- 5
+accumulated_depreciation <- annual_depreciation * years_of_depreciation
+book_value <- initial_capex - accumulated_depreciation
+gain_loss_on_sale <- salvage_value - book_value
+tax_on_sale_amount <- gain_loss_on_sale * tax_rate
+
+# Create cash flow table
+years <- c(2006, 2007, 2008, 2009, 2010, 2011)
+ebiat_values <- c(0, incremental$EBIAT)
+depreciation_values <- c(0, incremental$Depreciation)
+
+# Calculate Total Investment for each year
+total_investment <- numeric(6)
+for (i in 1:6) {
+  year <- years[i]
+  if (year == 2006) {
+    total_investment[i] <- initial_capex + delta_nwc[i]
+  } else if (year == 2011) {
+    # Delta_NWC - Recovery - Terminal Value
+    recovery <- nwc_levels[length(nwc_levels)]  # Final NWC level
+    tax_benefit <- -tax_on_sale_amount  # Negative gain = tax benefit
+    terminal_value <- salvage_value + tax_benefit
+    total_investment[i] <- delta_nwc[i] - recovery - terminal_value
+  } else {
+    total_investment[i] <- delta_nwc[i]
+  }
+}
+
+# Calculate Free Cash Flow
+fcf <- ebiat_values + depreciation_values - total_investment
+
+# Build output
+output_lines <- c(
+    paste(rep("=", 80), collapse=""),
+    "INCREMENTAL FREE CASH FLOW CALCULATION",
+    paste(rep("=", 80), collapse=""),
+    "",
+    "NWC LEVELS AND CHANGES:",
+    paste(rep("-", 80), collapse="")
+)
+
+for (i in 1:6) {
+    output_lines <- c(output_lines,
+        sprintf("  %d: Beg NWC = $%.1fM, End NWC = $%.1fM, Delta_NWC = $%.1fM",
+                years[i], nwc_levels[i], nwc_levels[i+1], delta_nwc[i]))
+}
+
+output_lines <- c(output_lines,
+    "",
+    "TERMINAL VALUE CALCULATION (2011):",
+    paste(rep("-", 80), collapse=""),
+    sprintf("  Book Value = $%.0f - $%.0f = $%.0fM", initial_capex, accumulated_depreciation, book_value),
+    sprintf("  Salvage Value = $%.0fM", salvage_value),
+    sprintf("  Gain/(Loss) on Sale = $%.0f - $%.0f = $%.0fM", salvage_value, book_value, gain_loss_on_sale),
+    sprintf("  Tax on Sale = $%.0f × %.2f = $%.1fM", gain_loss_on_sale, tax_rate, tax_on_sale_amount),
+    sprintf("  After-tax Salvage = $%.0f - $%.1f = $%.1fM", salvage_value, tax_on_sale_amount, salvage_value - tax_on_sale_amount),
+    sprintf("  NWC Recovery = $%.1fM", nwc_levels[length(nwc_levels)]),
+    "",
+    "FREE CASH FLOW TABLE:",
+    paste(rep("=", 80), collapse=""),
+    "",
+    "Year | EBIAT | Depr | EBIAT+Depr | Investment | Free Cash Flow",
+    paste(rep("-", 80), collapse="")
+)
+
+for (i in 1:6) {
+    output_lines <- c(output_lines,
+        sprintf("%d | $%5.0f | $%4.0f | $%10.0f | $%10.1f | $%14.1f",
+                years[i], ebiat_values[i], depreciation_values[i], 
+                ebiat_values[i] + depreciation_values[i], total_investment[i], fcf[i]))
+}
+
+cat(paste(output_lines, collapse = "\n"))
+
+# Create data frame and store in cf_df for later use
+cf_df <- data.frame(
+  Year = years,
+  EBIAT = ebiat_values,
+  Depreciation = depreciation_values,
+  Total_Investment = total_investment,
+  Free_Cash_Flow = fcf
+)
+
+```
+\
+
+##### Q2(f)
+
+```{r}
+#| label: r-Q2f
+#| message: false
+#| warning: false
+
+# Get the free cash flows
+cash_flows <- cf_df$Free_Cash_Flow
+
+# Define NPV function
+npv_function <- function(rate, cf) {
+    times <- 0:(length(cf) - 1)
+    sum(cf / (1 + rate)^times)
+}
+
+# Calculate IRR using uniroot (R's root-finding function, similar to brentq)
+irr_result <- uniroot(npv_function, 
+                      interval = c(-0.99, 2.0), 
+                      cf = cash_flows)
+irr_value <- irr_result$root
+
+# Verify by calculating NPV at the IRR
+npv_at_irr <- npv_function(irr_value, cash_flows)
+
+# Calculate NPV at different discount rates to show the concept
+test_rates <- c(0.00, 0.05, 0.10, 0.15, irr_value, 0.20, 0.25)
+npv_at_rates <- sapply(test_rates, npv_function, cf = cash_flows)
+
+# Build output as a vector of strings
+output_lines <- c(
+  "",
+  paste(rep("=", 70), collapse = ""),
+  "INTERNAL RATE OF RETURN (IRR) CALCULATION",
+  paste(rep("=", 70), collapse = ""),
+  "",
+  "FREE CASH FLOWS:",
+  paste(rep("-", 70), collapse = "")
+)
+
+# Add cash flows
+for (i in 1:length(cash_flows)) {
+  output_lines <- c(output_lines, 
+                    sprintf("  Year %d: $%8.1f million", cf_df$Year[i], cash_flows[i]))
+}
+
+# Add IRR section
+output_lines <- c(output_lines,
+  "",
+  "INTERNAL RATE OF RETURN:",
+  paste(rep("=", 70), collapse = ""),
+  sprintf("  IRR = %.4f or %.2f%%", irr_value, irr_value * 100),
+  "",
+  "VERIFICATION:",
+  paste(rep("-", 70), collapse = ""),
+  sprintf("  NPV at IRR = $%.6f million ≈ $0", npv_at_irr),
+  "",
+  "NPV AT DIFFERENT DISCOUNT RATES:",
+  paste(rep("-", 70), collapse = ""),
+  "  Discount Rate    NPV ($ millions)",
+  paste("  ", paste(rep("-", 40), collapse = ""))
+)
+
+# Add NPV at different rates
+for (i in 1:length(test_rates)) {
+  rate <- test_rates[i]
+  npv <- npv_at_rates[i]
+  
+  if (abs(rate - irr_value) < 0.0001) {
+    output_lines <- c(output_lines,
+                      sprintf("  %6.2f%%         $%8.2f  ← IRR", rate * 100, npv))
+  } else {
+    output_lines <- c(output_lines,
+                      sprintf("  %6.2f%%         $%8.2f", rate * 100, npv))
+  }
+}
+
+# Compare to a 15% discount rate
+npv_15 <- npv_function(0.15, cash_flows)
+
+output_lines <- c(output_lines,
+  "",
+  "COMPARISON TO 15% DISCOUNT RATE:",
+  paste(rep("-", 70), collapse = "")
+)
+
+if (irr_value > 0.15) {
+  output_lines <- c(output_lines,
+    sprintf("  The IRR (%.2f%%) is GREATER than 15%%", irr_value * 100),
+    sprintf("  NPV at 15%% = $%.2f million (POSITIVE)", npv_15),
+    "  → The project should be ACCEPTED at a 15% discount rate"
+  )
+} else {
+  output_lines <- c(output_lines,
+    sprintf("  The IRR (%.2f%%) is LESS than 15%%", irr_value * 100),
+    sprintf("  NPV at 15%% = $%.2f million (NEGATIVE)", npv_15),
+    "  → The project should be REJECTED at a 15% discount rate"
+  )
+}
+
+# Display all output at once
+cat(paste(output_lines, collapse = "\n"), "\n")
+```
+

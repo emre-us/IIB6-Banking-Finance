@@ -1,0 +1,17 @@
+# Preface {.unnumbered}
+
+This is a Quarto book.
+
+To learn more about Quarto books visit <https://quarto.org/docs/books>.
+
+::: {.callout-note icon="false"}
+## Comparison: Python vs R
+
+Both implementations produce identical numerical results, demonstrating the consistency of the calculations. Key differences in approach:
+
+**Data Structure**: Python uses pandas DataFrame with straightforward column arithmetic, while R uses data.frame with piping and `mutate()` for adding calculated columns. Both approaches are equally readable and efficient for this type of financial calculation.
+
+**Display Formatting**: Python uses string formatting with f-strings and the `to_string()` method, while R uses the `kable()` function from the knitr package for more polished table output in the rendered document.
+
+**Visualization**: Python's matplotlib provides explicit control over subplot layout, while R's ggplot2 with faceting offers a more declarative approach. The R implementation uses `pivot_longer()` to reshape data for faceted plotting, which is particularly elegant for comparing multiple metrics simultaneously.
+:::

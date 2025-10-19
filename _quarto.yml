@@ -1,0 +1,40 @@
+project:
+  type: book
+
+book:
+  title: "IIB6-Banking & Finance Supervisions with Python and R"
+  subtitle: | 
+    | Gonville & Caius
+    | 2025-26
+  author: "Emre Usenmez"
+  chapters:
+    - index.qmd
+    - Supo01.qmd
+    - codes.qmd
+    - references.qmd
+
+bibliography: references.bib
+
+format:
+  pdf:
+    documentclass: book
+    toc: true
+    number-sections: false
+    code-line-numbers: true
+    geometry: 
+      - margin=1in
+    keep-tex: true
+    
+# Code execution options
+execute:
+  echo: true
+  warning: false
+  message: false
+  cache: false
+
+jupyter: 
+  python:
+    python:
+     executable: /Library/Developer/CommandLineTools/usr/bin/python3
+
+
