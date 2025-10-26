@@ -1,0 +1,1386 @@
+---
+title: "Supervision 03"
+subtitle: "Michaelmas 2025"
+format: pdf
+editor: visual
+---
+
+## Question 1
+
+**You are evaluating a project's value. The relevant discount rate is 15%.**
+
+**(a) Your first guess is that the project will generate \$10 million next year and then die. What is the PV of the project?**\
+**(b) Suppose you find out that the \$10 million cash flows will be generated forever. What is the new PV of the project?**\
+**(c) What if the \$10 million of cash flows will only be generated for 15 years? Solve this as the difference between two perpetuities, one beginning in year 1 and one beginning in year 16.**\
+**(d) Suppose you find out that the cash flows will be \$10 million for 15 years, but then grow at 5% a year from then on. What is the new PV of the project?**\
+**(e) How does your answer to (d) change if the project dies after 30 years? There are two ways to calculate this.**
+
+(i) **You can set it up in Excel with one cell for each of the 30 years and just discount the cash flows year-by-year.**
+(ii) **You can adjust your answer from (d) to account for the lost cash flows after year 30.**
+
+\
+
+You are evaluating a project's value with a relevant discount rate of 15%. The project generates different cash flow patterns across various scenarios:
+
+a)  The project generates \$10 million next year and then terminates: $PV=\$8.70$ million
+b)  The project generates \$10 million in perpetuity: $PV=\$66.67$ million
+c)  The project generates \$10 million for 15 years only: $PV=\$58.47$ million
+d)  The project generates \$10 million for 15 years, then grows at 5% annually thereafter: $PV=\$71.38$ million
+e)  The project generates \$10 million for 15 years, grows at 5% annually, but terminates after 30 years: $PV=\$68.08$ million
+
+The key insights this question is aiming for students to get are:
+
+**Impact of Time Horizon**: Moving from a single payment to a perpetuity increases value by over 660%, demonstrating how duration dramatically affects valuation. The 15-year annuity captures 87.7% of the perpetuity's value, showing that distant cash flows contribute relatively little to present value at a 15% discount rate.
+
+**Value of Growth**: The growing perpetuity starting in year 16 adds \$12.91 million in present value beyond the 15-year annuity alone. This growth component is worth nearly 18% of the total project value, highlighting the importance of long-term growth prospects in valuation.
+
+**Truncation Cost**: Terminating the project at year 30 (rather than allowing infinite growth) costs \$3.30 million in present value. This represents only 4.6% of the total value, demonstrating that cash flows beyond 30 contribute little to present value at a 15% discount rate.
+
+::: {.callout-note icon="false"}
+### Theoretical Background
+
+**Present Value and Discounting**
+
+The fundamental principle of time value of money states that a dollar today is worth more than a dollar tomorrow. To compare cash flows occurring at different points in time, we discount future cash flows back to the present using an appropriate discount rate.
+
+The basic present value formula for a single cash flow is:
+
+$$
+PV = \frac{CF_t}{(1 + r)^t}
+$$
+
+where $CF_t$ is the cash flow at time $t$ and $r$ is the discount rate.\
+**Perpetuity Formula**
+
+A perpetuity is a stream of equal cash flows that continues forever. The present value of a perpetuity is:
+
+$$
+PV_{\text{perpetuity}} = \frac{C}{r}
+$$
+
+where $C$ is the constant cash flow per period and $r$ is the discount rate.
+
+**Intuition**: If you want to receive $C$ dollars forever at discount rate $r$, you need to invest $\frac{C}{r}$ today. This investment will generate $C$ in interest each period, which you can withdraw while keeping the principal intact.\
+**Annuity Formula**
+
+An annuity is a stream of equal cash flows for a finite number of periods. The present value of an annuity can be calculated as the difference between two perpetuities:
+
+$$
+PV_{\text{annuity}} = \frac{C}{r} - \frac{C}{r(1+r)^T} = \frac{C}{r}\left[1 - \frac{1}{(1+r)^T}\right]
+$$
+
+where $T$ is the number of periods.\
+**Alternative approach**: View it as a perpetuity starting today minus a perpetuity starting at time $T+1$:
+
+$$
+PV_{\text{annuity}} = \frac{C}{r} - \frac{1}{(1+r)^T} \times \frac{C}{r}
+$$\
+**Growing Perpetuity Formula**
+
+When cash flows grow at a constant rate $g$ forever, the present value is:
+
+$$
+PV_{\text{growing perpetuity}} = \frac{C}{r - g}
+$$
+
+where $C$ is the **first cash flow** (received at $t=1$), and $g < r$ for convergence. This is derived from an infinite geometric series where each cash flow grows by $(1+g)$. When discounted back at rate $r$, the sum converges to $C/(r-g)$, as long as $r>g$.
+
+**Critical Note**: The formula assumes $C$ is the cash flow at the end of the first period. If the first cash flow is different, adjust accordingly. For example, if you have $C$ at time $t$, and growth begins at time $t+1$, the first growing cash flow is $C(1+g)$ at time $t+1$.\
+**Combining Formulas**
+
+Complex cash flow patterns can be decomposed into combinations of these basic building blocks. For instance: - Finite cash flows followed by growth = Annuity + Growing perpetuity (properly timed) - Limited growth period = Growing perpetuity - Growing perpetuity (delayed)
+:::
+
+For each part of the problem, we will:
+
+1.  Identify the cash flow pattern (single payment, perpetuity, annuity, or growing perpetuity)
+2.  Apply the appropriate formula
+3.  For complex patterns, decompose into simpler components
+4.  Calculate the present value using both manual formulas and computational verification
+5.  Verify calculations using both Python and R
+
+```{r}
+#| label: setup-python
+#| include: false
+
+library(reticulate)
+
+# Tell reticulate which Python to use
+use_python("/Library/Developer/CommandLineTools/usr/bin/python3", required = TRUE)
+
+# Verify it's using the correct Python
+# py_config()
+```
+
+[R Setup]{.underline}:
+
+We will use `tidyverse` library and set up the information given in the question. The set-up is as follows:
+
+```{r}
+#| label: r-setupQ1
+#| message: false
+#| echo: false
+
+library(tidyverse)
+
+# Given parameters
+discount_rate <- 0.15
+cash_flow <- 10  # in millions
+growth_rate <- 0.05
+
+output <- sprintf("%s\nDISCOUNTING CASH FLOWS ANALYSIS\n%s\n\nDiscount Rate: 
+                  %s\nAnnual Cash Flow: $%g million\nGrowth Rate (when applicable): %s\n",
+                  paste(rep("=", 60), collapse=""),
+                  paste(rep("=", 60), collapse=""),
+                  scales::percent(discount_rate, accuracy = 0.1),
+                  cash_flow,
+                  scales::percent(growth_rate, accuracy = 0.1))
+cat(output)
+```
+
+\
+
+### Q1(a): Single Cash Flow
+
+Since this is a single cash flow, we have $$
+PV = \frac{CF_t}{(1+r)^t}=\frac{10}{1.15^1}=8.7
+$$
+
+[R Implementation]{.underline}:
+
+```{r}
+#| label: r-Q1a
+#| message: false
+#| echo: false
+
+# Part a: Single payment next year
+pv_a <- cash_flow / (1 + discount_rate)
+
+output <- sprintf("\nSingle Payment Next Year\n%s\nPV = $%g million / %g\nPV 
+                  = $%.2f million\n",
+                  paste(rep("-", 40), collapse=""),
+                  cash_flow,
+                  1 + discount_rate,
+                  pv_a)
+cat(output)
+```
+
+\
+
+### Q1(b): Perpetuity
+
+Now the project generates $\$10$ million forever, so we apply the perpetuity formula: $$
+PV = \frac{C}{r} = \frac{10}{0.15}=66.67
+$$
+
+```{r}
+#| label: r-Q1b
+#| message: false
+#| echo: false
+
+# Part b: Perpetuity
+pv_b <- cash_flow / discount_rate
+
+output <- sprintf("\nPerpetuity\n%s
+PV = $%g million / %g
+PV = $%.2f million\n",
+                  paste(rep("-", 40), collapse=""),
+                  cash_flow,
+                  discount_rate,
+                  pv_b)
+cat(output)
+```
+
+\
+
+### Q1(c): 15-Year Annuity
+
+The project generates \$10 million for 15 years only so we can calculate as the difference between two perpetuities:
+
+1.  A perpetuity starting in year 1
+2.  Minus a perpetuity starting in year 16 (discounted to present) $$
+    PV = \Big(\frac{C}{r}\Big) - \Big(\frac{1}{(1+r)^{15}} \times \frac{C}{r}\Big) = \Big(\frac{10}{0.15}\Big)-\Big(\frac{1}{1.15^{15}}\times\frac{10}{0.15}\Big)=58.47
+    $$
+
+```{r}
+#| label: r-Q1c
+#| message: false
+#| echo: false
+
+# Part c: 15-year annuity (as difference of two perpetuities)
+years_c <- 15
+perpetuity_now <- cash_flow / discount_rate
+perpetuity_at_year_15 <- (1 / (1 + discount_rate)^years_c) * (cash_flow / discount_rate)
+pv_c <- perpetuity_now - perpetuity_at_year_15
+
+output <- sprintf("\n15-Year Annuity\n%s
+Perpetuity starting now: $%.2f million
+Perpetuity starting year 16 (PV): $%.2f million
+PV = $%.2f - $%.2f\nPV = $%.2f million\n",
+                  paste(rep("-", 40), collapse=""),
+                  perpetuity_now,
+                  perpetuity_at_year_15,
+                  perpetuity_now,
+                  perpetuity_at_year_15,
+                  pv_c)
+cat(output)
+```
+
+\
+
+### Q1(d): 15 Years Then Growing Perpetuity
+
+The project now generates \$10 million for 15 years, then grows at 5% annually thereafter. We will combine the two components:
+
+1.  15-year annuity (already calculated in part c)
+2.  Growing perpetuity starting in year 16
+
+For the second part, we will need to first modify the perpetuity formula, $\frac{C}{r}$ to account for growth, and then bring it to the present. The first modification is in the denominator, where, because of the presence of growth, the formula becomes $$
+\frac{C}{r-g}.
+$$This is derived from an infinite geometric series where each cash flow grows by $(1+g)$. When discounted back at rate $r$, the sum converges to $C/(r-g)$, insofar as $r>g$.
+
+The second modification is due to the question stating "...for 15 years, but then grows at $5\%$ a year from then on. What this means is that growth must have already occurred for the first payment in year 16. Therefore, the first cash flow of the growing perpetuity is $C(1+g)$ and not $C$.
+
+After these modifications, we just need to bring it to the present value using discounting for 15 years and then add it to the present value of the 15-year annuity: $$PV = \big(PV_{\text{15-year annuity}}\big) + \Big(\frac{1}{(1+r)^{15}} \times \frac{C(1+g)}{r-g}\Big)$$ In part (c) we calculated the $PV_{\text{15-year annuity}}$ as $58.47$. So the $PV$ in this question is:
+
+$$
+PV = 58.47+\Big(\frac{1}{1.15^{15}}\times\frac{10(1+0.05)}{0.15-0.05}\Big)=71.38
+$$
+
+```{r}
+#| label: r-Q1d
+#| message: false
+#| echo: false
+
+# Part d: 15 years flat, then growing perpetuity
+# First cash flow of growing perpetuity is CF * (1 + g), not CF
+first_growth_cf <- cash_flow * (1 + growth_rate)
+growing_perpetuity_at_year_15 <- first_growth_cf / (discount_rate - growth_rate)
+growing_perpetuity_pv <- growing_perpetuity_at_year_15 / (1 + discount_rate)^years_c
+
+pv_d <- pv_c + growing_perpetuity_pv
+
+# Common mistake (for reference)
+incorrect_pv <- pv_c + (cash_flow/(discount_rate-growth_rate)) / (1+discount_rate)^years_c
+
+output <- sprintf("\n15 Years + Growing Perpetuity\n%s\n
+Value from first 15 years: $%.2f million
+First growing cash flow (year 16): $%.2f million
+Growing perpetuity value at year 15: $%.2f million
+Growing perpetuity PV at year 0: $%.2f million
+Total PV = $%.2f + $%.2f
+Total PV = $%.2f million\n
+Common mistake (using CF instead of CF*(1+g)): $%.2f million
+Difference: $%.2f million\n",
+                  paste(rep("-", 40), collapse=""),
+                  pv_c,
+                  first_growth_cf,
+                  growing_perpetuity_at_year_15,
+                  growing_perpetuity_pv,
+                  pv_c,
+                  growing_perpetuity_pv,
+                  pv_d,
+                  incorrect_pv,
+                  pv_d - incorrect_pv)
+cat(output)
+```
+
+\
+
+### Q1(e): 30-Year Project with Growth After Year 15
+
+Now we have the same project as part (d) that generates \$10 million for 15 years and then grows at 5% annually, but this time terminates after 30 years.
+
+#### (i) year-by-year discounting
+
+First option we are asked to do is to set this up in Excel. We will instead use Python and R to calculate the present value by discounting each year's cash flow individually and summing them as follows:
+
+```{r}
+#| label: r-Q1e-i
+#| message: false
+#| echo: false
+
+# Verification for part (e) using year-by-year discounting
+years_vec <- 1:30
+cash_flows_vec <- numeric(30)
+
+# Years 1-15: constant $10 million
+cash_flows_vec[1:15] <- cash_flow
+
+# Years 16-30: growing at 5%
+for (year in 16:30) {
+  years_of_growth <- year - 15
+  cash_flows_vec[year] <- cash_flow * (1 + growth_rate)^years_of_growth
+}
+
+# Calculate PV year by year
+pv_year_by_year <- sum(cash_flows_vec / (1 + discount_rate)^years_vec)
+
+output <- sprintf("\nVerification: Year-by-Year Calculation\n%s\n
+PV (year-by-year): $%.2f million\n",
+                  paste(rep("-", 40), collapse=""),
+                  pv_year_by_year)
+cat(output)
+```
+
+\
+
+#### (ii) Subtracting the PB of CF lost after 30 years
+
+For the second option, we can take the value from part (d) and subtract the present value of cash flows lost after year 30.
+
+The cash flow that would occur in year 31 (if the project continued) is: $$CF_{31} = 10 \times (1.05)^{16}$$
+
+This is because there are 16 years of growth (years 16-31).
+
+$$PV = PV_{\text{part d}} - \frac{1}{(1+r)^{30}} \times \frac{CF_{31}}{r-g}$$
+
+[R Implementation]{.underline}:
+
+```{r}
+#| label: r-Q1e-ii
+#| message: false
+#| echo: false
+
+# 30 years total (15 flat + 15 growing)
+years_total <- 30
+years_growth <- years_total - years_c  # 15 years of growth
+
+# Calculate what the cash flow would be at year 31 (if it continued)
+cash_flow_year_31 <- cash_flow * (1 + growth_rate)^16
+
+# Value of lost perpetuity starting year 31
+lost_perpetuity_at_year_30 <- cash_flow_year_31 / (discount_rate - growth_rate)
+lost_perpetuity_pv <- lost_perpetuity_at_year_30 / (1 + discount_rate)^years_total
+
+pv_e <- pv_d - lost_perpetuity_pv
+
+output <- sprintf("\nPart (e): 30-Year Project (15 flat + 15 growing)\n%s
+PV if growth continued forever: $%.2f million
+Cash flow at year 31 (if continued): $%.2f million
+Lost perpetuity value at year 30: $%.2f million
+Lost perpetuity PV at year 0: $%.2f million
+Total PV = $%.2f - $%.2f\nTotal PV = $%.2f million
+\nLoss from termination at year 30: $%.2f million\n",
+                  paste(rep("-", 40), collapse=""),
+                  pv_d,
+                  cash_flow_year_31,
+                  lost_perpetuity_at_year_30,
+                  lost_perpetuity_pv,
+                  pv_d,
+                  lost_perpetuity_pv,
+                  pv_e,
+                  pv_d - pv_e)
+cat(output)
+```
+
+\pagebreak
+
+## Question 2
+
+**The executives of a coffee and beverage chain are considering investing in a new line of high-volume espresso machines. The machines are expected to allow faster processing of customer orders and increase sales volume. They also require slightly higher grade coffee beans and more experienced operators of the machines, so that investing in the technology would raise the cost of goods sold as well as selling and administrative expenses.**
+
+**As a management consultant advising the chain, you are initially given the following information:**
+
+-   **The machines would be purchased in late 2006 at a cost of \$200 million and are expected to have a salvage value of \$50 million at the end of 2011, when they would be sold.**
+-   **Net working capital will have to increase by \$5 million during 2006 to prepare for the installation and operation of the machines.**
+-   **For years 2007-2011, net working capital devoted to this project will have to equal 20% of incremental sales from these machines.**
+-   **The corporate tax rate is 35% and depreciation is the same for accounting purposes and tax purposes.**
+-   **Some income statemend items as follows**
+
+| Year (all values in \$mil) | 2007 | 2008 | 2009 | 2010 | 2011 |
+|------------|------------|------------|------------|------------|------------|
+| **Income Statement Items for Existing Business** |  |  |  |  |  |
+| Sales | 360 | 492 | 840 | 942 | 720 |
+| Cost of Goods Sold | 156 | 210 | 360 | 408 | 312 |
+| Selling and Administrative Expenses | 60 | 78 | 132 | 150 | 114 |
+| Depreciation | 18 | 18 | 18 | 18 | 18 |
+| Interest | 30 | 24 | 24 | 18 | 18 |
+| **Forecast of Incremental Income Statement Items for New Machines** |  |  |  |  |  |
+| Sales | 76 | 98 | 164 | 132 | 99 |
+| Cost of Goods Sold | 19 | 15 | 21 | 26 | 22 |
+| Selling and Administrative Expenses | 12 | 14 | 15 | 14 | 12 |
+| Depreciation | 4 | 4 | 4 | 4 | 4 |
+| Interest | 6 | 5 | 5 | 4 | 4 |
+
+(a) **Calculate EBIDTA, EBIT, EBIAT, and accounting net income for the existing business for 2007- 2011. Then calculate the amounts by which these values would change if the new technology were adopted.**
+
+(b) **A highly caffeinated divisional executive of the chain calls you and suggests that he has already worked out the NPV of the project. He says that he discounted 2007-2011 accounting net income that would result from the project and that this value was highly positive. Therefore, he sees no reason to hesitate in proceeding with the project. Explain what is wrong with this reasoning. (Do not bother to replicate his calculations.)**
+
+(c) **An even more caffeinated divisional executive of the chain calls you a few minutes later and says that she also found that the NPV of the project is highly positive. She says that she discounted 2006-2011 free cash flows from the firm as a whole including the flows from the new project and that this value was highly positive. Therefore, she insists that they should immediately proceed with the project. Explain what is wrong with this reasoning. (Do not bother to replicate her calculations.)**
+
+(d) **Calculate the incremental free cash flow for each of the years 2006-2011 that would result from adopting the project.**
+
+(e) **After seeing your projections of incremental cash flows for the years 2006-2011, the CEO of the chain calls you and says that he is worried that the divisional executives have been ignoring cash flows that are related to this project. In particular, he knows that they hired marketing researchers and paid them \$10 million in January 2006 for a study on the elasticity of consumer demand with respect to espresso drink waiting times. Therefore, he argues that an additional \$10 million charge should be subtracted in 2006, at very least to make sure the divisional executives realize the costs they are imposing on the company. Evaluate this argument.**
+
+(f) **Is there a discount rate at which the NPV of this project's cash flows would be exactly (or almost exactly) zero? Find this discount rate either using trial and error in Excel or using the Excel solver function. This discount rate is called the internal rate of return of the project.**\
+
+```{r}
+#| label: r-setupQ2
+#| message: false
+#| warning: false
+#| echo: false
+
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+
+# Corporate tax rate
+tax_rate <- 0.35
+
+# Create data for existing business using data.frame
+existing_biz <- data.frame(
+  Year = c(2007, 2008, 2009, 2010, 2011),
+  Sales = c(360, 492, 840, 942, 720),
+  COGS = c(156, 210, 360, 408, 312),
+  S_A = c(60, 78, 132, 150, 114),
+  Depreciation = c(18, 18, 18, 18, 18),
+  Interest = c(30, 24, 24, 18, 18)
+)
+
+# Create data for incremental (new machines) using data.frame
+incremental <- data.frame(
+  Year = c(2007, 2008, 2009, 2010, 2011),
+  Sales = c(76, 98, 164, 132, 99),
+  COGS = c(19, 15, 21, 26, 22),
+  S_A = c(12, 14, 15, 14, 12),
+  Depreciation = c(4, 4, 4, 4, 4),
+  Interest = c(6, 5, 5, 4, 4)
+)
+
+```
+
+\
+
+### Q2(a): Calculate Financial Metrics
+
+We are asked to first calculate EBITDA, EBIT, EBIAT, and accounting net income and then consider what would happen if the new technology were adopted.
+
+::: {.callout-note icon="false"}
+#### Theoretical Background
+
+**EBITDA (Earnings Before Interest, Taxes, Depreciation, and Amortization)**: $$\text{EBITDA} = \text{Sales} - \text{COGS} - \text{S\&A Expenses}$$
+
+EBITDA gives us the earnings after cost of goods sold and administrative expenses are accounted for. It represents operating performance before non-cash charges (depreciation) and financing decisions (interest). It's useful for comparing operational efficiency across companies with different capital structures. It provides a quick assessment of operating efficiency without the noise from depreciation methods or capital structure. However, it can be misleading because it ignores the real cost of capital expenditures.\
+
+**EBIT (Earnings Before Interest and Taxes)**: $$\text{EBIT} = \text{EBITDA} - \text{Depreciation}$$
+
+EBIT measures operating profit after accounting for the cost of long-term assets through depreciation, but before financing costs and taxes. By incorporating depreciation, it gives a more complete picture of profitability after accounting for asset consumption. This is important for capital-intensive businesses like those with expensive equipment.\
+
+**EBIAT (Earnings Before Interest After Taxes)**: $$\text{EBIAT} = \text{EBIT} \times (1 - \tau_c)$$
+
+where $\tau_c$ is the corporate tax rate. EBIAT represents the after-tax operating income available to all investors (both debt and equity holders) before interest payments. This is a key metric for valuation because it isolates operating performance from financing decisions. It is crucial for valuation because it shows after-tax operating earnings available to all investors (both debt and equity). This metric is the foundation for calculating free cash flow.\
+**Net Income (Accounting Net Income)**:
+
+Net income is the bottom-line profit available to equity holders after all expenses, including interest and taxes. It shows the bottom-line profit for equity holders, but it includes the effects of financing decisions (interest expense). For project evaluation, we want to separate operating performance from how the project is financed. \begin{align*}
+\text{Net Income} &= \text{Taxable Income} - \text{Tax}\\
+\quad\\
+\text{Taxable Income} &= \text{EBIT} - \text{Interest}\\
+\text{Tax} &= \tau_c \times \text{Taxable Income}\\
+\quad\\
+&\text{so} \\
+\text{Net Income} &= (\text{EBIT} - \text{Interest})-\big(\tau_c \times (\text{EBIT} - \text{Interest})\big)
+\end{align*}\
+
+**Why Calculate Incremental Metrics?**
+
+For capital budgeting decisions, we need to isolate the *incremental* impact of the new project. The incremental metrics show how much the new machines would add to (or subtract from) the company's profitability. We use the same formulas but apply them only to the incremental revenues and costs.
+:::
+
+#### (i) Existing Business
+
+```{r}
+#| label: r-Q2a-i
+#| message: false
+#| warning: false
+#| echo: false
+
+# Calculate metrics for existing business
+existing_biz <- existing_biz %>%
+  mutate(
+    EBITDA = Sales - COGS - S_A,
+    EBIT = EBITDA - Depreciation,
+    EBIAT = EBIT * (1 - tax_rate),
+    Taxable_Income = EBIT - Interest,
+    Tax = Taxable_Income * tax_rate,
+    Net_Income = Taxable_Income - Tax
+  )
+
+# Display results
+existing_biz %>%
+  select(Year, EBITDA, EBIT, EBIAT, Taxable_Income, Tax, Net_Income) %>%
+  kable(format = "simple", 
+        digits = 0,
+        col.names = c("Year", "EBITDA", "EBIT", "EBIAT", 
+                      "Taxable Income", "Tax", "Net Income"))
+
+```
+
+#### (ii) New Technology
+
+Now we are asked to do the same set of calculations incrementally for the new technology. By applying these to the incremental income statement we would understand how much the new machines would add to (or subtract from) the company's profitability.
+
+```{r}
+#| label: r-Q2a-ii
+#| message: false
+#| warning: false
+#| echo: false
+
+# Calculate metrics for incremental impact
+incremental <- incremental %>%
+  mutate(
+    EBITDA = Sales - COGS - S_A,
+    EBIT = EBITDA - Depreciation,
+    EBIAT = EBIT * (1 - tax_rate),
+    Taxable_Income = EBIT - Interest,
+    Tax = Taxable_Income * tax_rate,
+    Net_Income = Taxable_Income - Tax
+  )
+
+# Now we can use select since columns exist
+incremental %>%
+  select(Year, EBITDA, EBIT, EBIAT, Taxable_Income, Tax, Net_Income) %>%
+  kable(format = "simple", 
+        digits = 0,
+        col.names = c("Year", "EBITDA", "EBIT", "EBIAT", "Taxable Income", "Tax", "Net Income"),
+        row.names = FALSE)
+```
+
+The analysis reveals important insights about both the existing business and the incremental impact of the new espresso machines:
+
+| Scenario                         | 2007  | 2008  | 2009  | 2010  | 2011  |
+|----------------------------------|-------|-------|-------|-------|-------|
+| **Existing Business EBITDA**     | \$144 | \$204 | \$348 | \$384 | \$294 |
+| **Incremental EBITDA**           | \$45  | \$69  | \$128 | \$92  | \$65  |
+| **Existing Business Net Income** | \$62  | \$105 | \$199 | \$226 | \$168 |
+| **Incremental Net Income**       | \$23  | \$39  | \$77  | \$55  | \$37  |
+
+**Existing Business Performance**: The existing business shows strong profitability with EBITDA ranging from \$144 million (2007) to \$384 million (2010). The business peaked in 2010 with EBIT of \$366 million and net income of \$226 million, before declining somewhat in 2011. Some speculation: This pattern may suggest a mature business with some cyclical variation. It could be a mature business because it already has substantial revenue (\$360M to \$942M in sales) and established operations. It may not a start-up or high-growth company. The cyclical variation comes from the pattern that shows strong growth from 2007-09 - possibly due to economic recovery or market expansion, peak in 2010, and decline in 2011. This up and down pattern may suggest the business is affected by external factors such as economic cycles (consumer spending on coffee and other beveridges), seasonal patterns, market conditions, etc. A truly stable, mature business might show steadier, more predictable growth. The volatility may suggest cyclical influences.
+
+**Incremental Contribution from New Machines**: The new machines add meaningful incremental value across all metrics. Incremental EBITDA ranges from \$45 million (2007) to \$128 million (2009), representing 31-37% of existing business EBITDA. The incremental EBIAT follows a similar pattern, contributing \$27-81 million annually.
+
+**Profitability Margins**: The incremental project shows healthy profitability. For example, in 2009, incremental sales of \$164 million generate incremental EBIAT of \$81 million, representing a strong operating margin after taxes. This suggests the new technology is operationally efficient.
+
+**Year-over-Year Trends**: Both the existing business and the incremental project show strong performance in 2009-2010, with some decline in 2011. Some speculation: This could reflect market conditions or product lifecycle effects that should be considered in the overall investment decision. The lifecycle effects may be due to 2011 decline which could reflect market saturation, competitive pressure, product fatigue, or cannibalization. On the other hand, the decline could be due to economic downturn, one-time events such as supply chain disruptions, accounting changes, or to strategic decisions like closing down some locations etc.
+
+[Important Considerations]{.underline}:
+
+**EBIAT vs Net Income**: Notice that EBIAT is consistently higher than net income for both the existing business and the incremental project. This difference represents the tax shield from interest deductions. For capital budgeting purposes, we typically focus on EBIAT rather than net income because EBIAT represents operating performance independent of financing decisions.
+
+**Incremental Analysis**: The key insight is that we can isolate exactly how much value the new machines would add. For instance, in 2009, the machines would increase the company's EBIAT from \$215 million to \$296 million (\$215 + \$81), a 38% improvement.\
+
+### Q2(b): Problem with discounting accounting net income
+
+Discounting accounting net income to calculate NPV is incorrect for capital budgeting decisions. While net income is useful for financial reporting, it is *not* equivalent to cash flow and should never be used directly in NPV calculations. The biggest problems with discounting account net income are:
+
+[Problem 1: Investment Cash Flows are Completely Ignored]{.underline}:
+
+Accounting net income only reflects revenues and expenses that appear on the income statement. It completely omits:
+
+-   Initial capital investment (\$200 million for the espresso machines in 2006)
+-   Changes in net working capital (the \$5 million increase in 2006, plus ongoing changes tied to sales)
+-   Maintenance capital expenditures (any ongoing investments to keep equipment operational)
+-   Salvage value (the \$50 million recovery when machines are sold in 2011)
+
+The divisional executive's approach ignores the \$200 million upfront cost entirely. Even if net income is positive every year, the project could still destroy value if we're investing \$200 million to generate those earnings.
+
+[Problem 2: Depreciation Treatment is Incorrect]{.underline}:
+
+Depreciation is subtracted when calculating accounting net income, but this creates two issues:
+
+1.  *Depreciation is a non-cash expense*: It's an accounting allocation of past capital spending, not an actual cash outflow in the current period.
+
+2.  *Depreciation only matters for taxes*: Its only cash impact is the tax shield it creates (Depreciation $\times$ Tax Rate). The full depreciation amount should not reduce the cash flow we're discounting.
+
+*Correct approach*: We should use EBIAT (which excludes depreciation) and then add back depreciation before subtracting the actual tax paid. This ensures we only account for real cash flows.
+
+$\text{Operating Cash Flow} = \text{EBIAT} + \text{Depreciation}$
+
+Or alternatively:
+
+$\text{Operating Cash Flow} = \text{EBIT} + \text{Depreciation} - \text{Taxes}$
+
+[Problem 3: Interest Deductions Should Not Be Included]{.underline}:
+
+Accounting net income is calculated *after* subtracting interest expense. This is problematic because:
+
+1.  We want to value all cash flows available to all investors (both debt and equity holders), not just equity holders. Including interest deductions means we're only valuing the equity portion.
+
+2.  The discount rate already accounts for financing: When we use WACC (Weighted Average Cost of Capital) as our discount rate, it already reflects the capital structure and the cost of debt. Subtracting interest from cash flows would be double-counting the cost of debt.
+
+3.  We want to separate investment decisions from financing decisions: The project's value should be independent of how we choose to finance it. Including interest expense mixes these two distinct decisions.
+
+*Correct approach*: Use cash flows available to all investors (like Free Cash Flow to the Firm), which are calculated before interest deductions.\
+
+::: {.callout-note icon="true"}
+#### Cash Flow vs Accounting Income
+
+The fundamental principle of capital budgeting is: $$
+\text{NPV} = \sum_{t=0}^{T} \frac{\text{Free Cash Flow}_t}{(1 + r)^t}
+$$\
+
+**Free Cash Flow** $\neq$ Net Income
+
+Free Cash Flow represents the actual cash generated or consumed by the project, which is what investors care about. You can't pay dividends or reinvest accounting earnings - you can only use actual cash.
+
+The relationship is: $$
+\text{FCF} = \text{EBIAT} + \text{Depreciation} - \text{Capital Expenditures} - \Delta\text{Net Working Capital}
+$$
+
+Notice that:
+
+-   We start with EBIAT (not Net Income)
+-   We add back depreciation (non-cash charge)
+-   We subtract actual investments (not in Net Income at all)
+-   We adjust for working capital changes (not in Net Income)
+:::
+
+Let's demonstrate why using net income gives the wrong answer for 2007:
+
+[What the Executive Calculated (WRONG)]{.underline}:
+
+```         
+Net Income (2007) = $23 million
+```
+
+[What Should Actually Be Used]{.underline}:
+
+```         
+EBIAT (2007)                           = $27 million
+Plus: Depreciation (add back)          = $4 million
+Less: Change in Working Capital        = $10 million
+Less: Initial Investment (from 2006)   = Allocated portion
+                                       ___________
+```
+
+Operating Cash Flow $\neq$ \$23 million.
+
+**What the Executive Should Have Done**
+
+Instead of discounting net income, the executive should:
+
+1.  *Calculate Free Cash Flow* for each year:
+
+    -   Start with EBIAT (not Net Income)
+    -   Add back depreciation
+    -   Subtract capital expenditures
+    -   Subtract changes in net working capital
+
+2.  *Include all investment cash flows*:
+
+    -   Initial machine purchase (\$200M in 2006)
+    -   Working capital requirements
+    -   Salvage value (\$50M in 2011)
+
+3.  *Use an appropriate discount rate* (like WACC) that reflects the project's risk
+
+4.  *Calculate NPV* as: $\text{NPV} = \sum_{t=0}^{T} \frac{\text{FCF}_t}{(1 + \text{WACC})^t}$
+
+We'll demonstrate the correct calculation in Part (d).
+
+::: callout-tip
+#### Rule of Thumb
+
+If someone proposes discounting any income statement line item (Net Income, EBIT, EBITDA, etc.) directly for NPV analysis, they're making a mistake. Always build up from cash flows, accounting for all investments and non-cash items.
+:::
+
+\
+
+### Q2(c): Problem with Discounting CF from Firm as a Whole
+
+The fundamental problem here is that calculating the NPV of the *entire firm* (eixisting business + new project) tells us absolutely nothing about whether the *new project alone* creates or destroys value.
+
+A positive NPV for the combined firm doesn't mean the project is worthwhile — it only confirms that the firm as a whole has positive value, which we presumably already knew!
+
+The core issue is that the purpose of capital budgeting is to answer the question "*Does this specific project create value?*" as opposed to the question "Does our company have positive value?". This is why we need incremental analysis.
+
+The correct approach would have been to calculate the incremental analysis. First, the executives should have identified incremental cash flows by calculating only the cash flows that change because of the new technology. Then compare the cash flows with and without the technology, the difference of which is the incremental cash flows from the project. And finally evaluate the project on its own merits.\
+
+### Q2(d): Incremental Free Cash Flow
+
+Now we'll calculate the incremental free cash flows for the espresso machine project, properly accounting for: - Initial investment - Working capital changes\
+- Operating cash flows (EBIAT + Depreciation) - Terminal value (salvage value and working capital recovery)
+
+This will give us the correct cash flows to use in an NPV analysis.
+
+::: {.callout-note icon="true"}
+#### Theoretical Background: Free Cash Flow
+
+*Free Cash Flow to the Firm (FCFF)* represents the cash available to all investors (both debt and equity holders) after the company has made necessary investments in operating capital.
+
+The formula is:
+
+$\text{Free Cash Flow} = \text{EBIAT} + \text{Depreciation} - \text{Investment}$
+
+where:
+
+$\text{Investment} = \text{Capital Expenditures} + \Delta\text{Net Working Capital}$
+
+-   *EBIAT*: After-tax operating income available to all investors
+-   *Plus Depreciation*: Add back this non-cash expense (it was subtracted to get EBIT)
+-   *Minus CapEx*: Subtract actual cash spent on new equipment and facilities
+-   *Minus* $\Delta$NWC: Subtract increases in working capital (cash tied up in operations)
+
+[Components of Investment]{.underline}:
+
+1.  *Capital Expenditures (CapEx)*:
+    -   Initial investment in equipment (\$200M in 2006)
+    -   Ongoing maintenance capital expenditures (if any)
+    -   Terminal cash flows: salvage value (recovery) and tax on sale
+2.  *Change in Net Working Capital (*$\Delta$NWC):
+    -   Working capital = Current Assets - Current Liabilities
+    -   Typically: Inventory + Accounts Receivable - Accounts Payable
+    -   An *increase* in NWC is a cash *outflow* (ties up cash)
+    -   A *decrease* in NWC is a cash *inflow* (releases cash)
+    -   At project end, working capital is typically recovered
+:::
+
+\
+
+**Step-by-Step Approach**
+
+We need to calculate free cash flow for each year from 2006-2011:
+
+Year 2006 (Initial Investment Year):
+
+-   Initial CapEx: -\$200 million
+-   Initial NWC increase: -\$5 million
+-   No operating cash flows yet (machines not operational)
+
+Years 2007-2011 (Operating Years):
+
+-   Operating cash flow: EBIAT + Depreciation
+-   $\Delta$NWC: Changes based on 20% of incremental sales
+-   No additional CapEx (machines already purchased)
+
+Year 2011 (Terminal Year):
+
+-   Operating cash flow: EBIAT + Depreciation
+-   Salvage value: +\$50 million (pre-tax)
+-   Tax on salvage: Calculate based on book value
+-   Recovery of NWC: Release all working capital\
+
+**Detailed Calculations**
+
+[Working Capital Analysis]{.underline}:
+
+From the problem: -
+
+-   2006: NWC must increase by \$5 million (initial setup)
+-   2007-2011: NWC = 20% of *incremental sales* each year
+
+NWC Levels:
+
+```         
+Beginning 2006 NWC: $0 million
+End 2006 NWC: $5 million (given)
+End 2007 NWC: 20% × $76M = $15.2 million
+End 2008 NWC: 20% × $98M = $19.6 million
+End 2009 NWC: 20% × $164M = $32.8 million
+End 2010 NWC: 20% × $132M = $26.4 million
+End 2011 NWC: 20% × $99M = $19.8 million
+Recovery in 2011: -$19.8 million (release back to $0)
+```
+
+Change in NWC (what matters for cash flow):
+
+```         
+2006: $5.0M - $0M = $5.0M outflow
+2007: $15.2M - $5.0M = $10.2M outflow
+2008: $19.6M - $15.2M = $4.4M outflow
+2009: $32.8M - $19.6M = $13.2M outflow
+2010: $26.4M - $32.8M = -$6.4M inflow (NWC decreases!)
+2011: $19.8M - $26.4M = -$6.6M inflow, PLUS $19.8M recovery = $26.4M total inflow
+```
+
+[Salvage Value and Tax Calculation]{.underline}:
+
+Book Value at End of 2011:
+
+```         
+Original Cost: $200 million
+Accumulated Depreciation: $4M × 5 years = $20 million
+Book Value: $200M - $20M = $180 million
+```
+
+Tax on Sale:
+
+```         
+Salvage Value: $50 million
+Book Value: $180 million
+Loss on Sale: $50M - $180M = -$130 million
+Tax Benefit: 35% × $130M = $45.5 million (reduces taxes)
+```
+
+After-Tax Salvage Value:
+
+```         
+Pre-tax Salvage: $50 million
+Plus: Tax Benefit: $45.5 million
+After-tax Salvage: $95.5 million
+```
+
+Let's now build these in Python and R.
+
+```{r}
+#| label: r-Q2d
+#| message: false
+#| warning: false
+#| echo: false
+
+# Calculate incremental free cash flows for 2006-2011
+
+# Given parameters
+initial_capex <- 200  # million
+initial_nwc <- 5  # million
+salvage_value <- 50  # million
+tax_rate <- 0.35
+nwc_percent <- 0.20
+
+# Sales from incremental project (for NWC calculation)
+sales <- incremental$Sales
+
+# Calculate NWC levels
+nwc_levels <- c(0, initial_nwc)  # Start of 2006, End of 2006
+for (sale in sales) {
+  nwc_levels <- c(nwc_levels, nwc_percent * sale)
+}
+
+# Calculate changes in NWC
+delta_nwc <- diff(nwc_levels)
+
+# Calculate book value and tax on salvage
+annual_depreciation <- incremental$Depreciation[1]  # $4M per year
+years_of_depreciation <- 5
+accumulated_depreciation <- annual_depreciation * years_of_depreciation
+book_value <- initial_capex - accumulated_depreciation
+gain_loss_on_sale <- salvage_value - book_value
+tax_on_sale_amount <- gain_loss_on_sale * tax_rate
+
+# Create cash flow table
+years <- c(2006, 2007, 2008, 2009, 2010, 2011)
+ebiat_values <- c(0, incremental$EBIAT)
+depreciation_values <- c(0, incremental$Depreciation)
+
+# Calculate Total Investment for each year
+total_investment <- numeric(6)
+for (i in 1:6) {
+  year <- years[i]
+  if (year == 2006) {
+    total_investment[i] <- initial_capex + delta_nwc[i]
+  } else if (year == 2011) {
+    # Delta_NWC - Recovery - Terminal Value
+    recovery <- nwc_levels[length(nwc_levels)]  # Final NWC level
+    tax_benefit <- -tax_on_sale_amount  # Negative gain = tax benefit
+    terminal_value <- salvage_value + tax_benefit
+    total_investment[i] <- delta_nwc[i] - recovery - terminal_value
+  } else {
+    total_investment[i] <- delta_nwc[i]
+  }
+}
+
+# Calculate Free Cash Flow
+fcf <- ebiat_values + depreciation_values - total_investment
+
+# Build output
+output_lines <- c(
+    paste(rep("=", 80), collapse=""),
+    "INCREMENTAL FREE CASH FLOW CALCULATION",
+    paste(rep("=", 80), collapse=""),
+    "",
+    "NWC LEVELS AND CHANGES:",
+    paste(rep("-", 80), collapse="")
+)
+
+for (i in 1:6) {
+    output_lines <- c(output_lines,
+        sprintf("  %d: Beg NWC = $%.1fM, End NWC = $%.1fM, Delta_NWC = $%.1fM",
+                years[i], nwc_levels[i], nwc_levels[i+1], delta_nwc[i]))
+}
+
+output_lines <- c(output_lines,
+    "",
+    "TERMINAL VALUE CALCULATION (2011):",
+    paste(rep("-", 80), collapse=""),
+    sprintf("  Book Value = $%.0f - $%.0f = $%.0fM", initial_capex, accumulated_depreciation, book_value),
+    sprintf("  Salvage Value = $%.0fM", salvage_value),
+    sprintf("  Gain/(Loss) on Sale = $%.0f - $%.0f = $%.0fM", salvage_value, book_value, gain_loss_on_sale),
+    sprintf("  Tax on Sale = $%.0f × %.2f = $%.1fM", gain_loss_on_sale, tax_rate, tax_on_sale_amount),
+    sprintf("  After-tax Salvage = $%.0f - $%.1f = $%.1fM", salvage_value, tax_on_sale_amount, salvage_value - tax_on_sale_amount),
+    sprintf("  NWC Recovery = $%.1fM", nwc_levels[length(nwc_levels)]),
+    "",
+    "FREE CASH FLOW TABLE:",
+    paste(rep("=", 80), collapse=""),
+    "",
+    "Year | EBIAT | Depr | EBIAT+Depr | Investment | Free Cash Flow",
+    paste(rep("-", 80), collapse="")
+)
+
+for (i in 1:6) {
+    output_lines <- c(output_lines,
+        sprintf("%d | $%5.0f | $%4.0f | $%10.0f | $%10.1f | $%14.1f",
+                years[i], ebiat_values[i], depreciation_values[i], 
+                ebiat_values[i] + depreciation_values[i], total_investment[i], fcf[i]))
+}
+
+cat(paste(output_lines, collapse = "\n"))
+
+# Create data frame and store in cf_df for later use
+cf_df <- data.frame(
+  Year = years,
+  EBIAT = ebiat_values,
+  Depreciation = depreciation_values,
+  Total_Investment = total_investment,
+  Free_Cash_Flow = fcf
+)
+
+```
+
+[Interpretation]{.underline}:
+
+The incremental free cash flows reveal several important insights about the espresso machine project:
+
+*Initial Investment Period (2006)*: The project requires a large cash outlay of \$205 million, consisting of the \$200 million equipment purchase and \$5 million in initial working capital. This is the typical pattern for capital-intensive projects.
+
+*Growth Phase (2007-2009)*: Unlike many growth projects, this generates positive FCF immediately. Operating cash flows (EBIAT+Depr \$31-85M) exceed working capital needs.
+
+*Working Capital Pattern*: Grows with sales to \$32.8M peak (2009), then declines. When sales fall in 2010-2011, working capital is released, creating cash inflows.
+
+*Terminal Year (2011)*: We see exceptional FCF of \$166.2M coming from operating cash flow of \$44M, after-tax salvage of \$95.5M (\$50M proceeds + \$45.5M tax benefit from loss) and NWC recovery of \$19.8M.
+
+*Working Capital Dynamics*: The NWC pattern follows sales: growing from \$5M (2006) to a peak of \$32.8M (2009), then declining. This \$27.8M swing represents cash temporarily tied up in operations, which is eventually recovered.
+
+*Tax Shield from Loss on Sale*: The machines have a book value of \$180M but sell for only \$50M, creating a \$130M loss. This loss generates a tax benefit of \$45.5M (35% × \$130M). This nearly doubles salvage value and significantly boosts the terminal cash flow. This is why we must carefully calculate after-tax salvage values.
+
+*Payback*: Project generates cumulative positive cash by 2009, recovering the initial \$205M investment within 3-4 years.
+
+[Common Mistakes to Avoid]{.underline}:
+
+1.  *Forgetting to add back depreciation*: Depreciation is a non-cash expense
+2.  *Ignoring working capital changes*: These can be substantial, especially for growing businesses
+3.  *Using pre-tax salvage value*: Always calculate the tax impact of asset sales
+4.  *Forgetting NWC recovery*: At project termination, working capital is typically recovered
+5.  *Confusing NWC levels with changes*: Cash flow depends on the change in NWC, not the level
+
+In the next section, we'll address whether sunk costs (like the \$10 million fee for marketing research on wait times study) should be included in the analysis.
+
+\
+
+### Q2(e): Treatment of Sunk Costs
+
+This is an example of a sunk cost fallacy.
+
+::: {.callout-warning icon="false"}
+#### The Sunk Cost Fallacy
+
+The CEO's argument, while understandable from an accountability perspective, is economically incorrect for capital budgeting purposes.The \$10 million spent on marketing research is a sunk cost. Sunk costs are expenditures that have already been incurred and that cannot be recovered regardless of whether the project proceeds or not. Some other examples include, R&D expenses already incurred, prototype development costs already paid, feasibility studies already conducted etc. Sunk costs should never influence forward-looking decisions.
+:::
+
+\
+
+This question highlights the fundamental principle: *only incremental cash flows matter*. That is, we focus on what changes as a result of doing this project versus if we don't.
+
+CEO's concern is wrong in terms of capital budgeting because including the \$10 million sunk cost would bias the analysis toward rejecting the project, potentially causing the company to reject a value-creating investment just because of an unrelated past expenditure.The \$10 million is gone whether we proceed or not. Our decision today should be based solely on whether the future benefits exceed the future costs.
+
+On the other hand, CEO's concern is understandable because the divisional executives made a poor decision to spend \$10 million on research for a project that might not even be approved. They should bear responsibility for this cost.\
+
+### Q2(f): IRR Calculation
+
+In the final part, we'll calculate the *Internal Rate of Return (IRR)* of the project.
+
+::: {.callout-note icon="true"}
+#### Theoretical Background: Internal Rate of Return (IRR)
+
+The Internal Rate of Return (IRR) is the discount rate that makes the Net Present Value (NPV) of a project equal to zero. Mathematically: $$
+NPV = \sum_{t=0}^{T} \frac{FCF_t}{(1 + IRR)^t} = 0
+$$
+
+The IRR represents: - The average annual return generated by the project - The "break-even" discount rate—if the actual cost of capital is below the IRR, the project creates value - The maximum rate at which we could borrow to finance the project and still break even
+
+If IRR \> Required Rate of Return (hurdle rate) we would accept the project.
+
+It is a useful metric as it is easy to interpret (a percentage return) and doesn't require specifying a discount rate upfront. It is also commonly understood by managers. However, it can have multiple solutions if cash flows change signs multiple times. It also assumes that cash flows are reinvested at the IRR which is not very realistic. When comparing mutually exclusive project, it can also give misleading results. Theoretically, NPV is superior but IRR provides useful supplementary information.
+:::
+
+\
+
+The IRR cannot be solved algebraically and requires trial and error. We will use the built-in functions in Python and R.\
+
+```{r}
+#| label: r-Q2f
+#| message: false
+#| warning: false
+#| echo: false
+
+# Get the free cash flows
+cash_flows <- cf_df$Free_Cash_Flow
+
+# Define NPV function
+npv_function <- function(rate, cf) {
+    times <- 0:(length(cf) - 1)
+    sum(cf / (1 + rate)^times)
+}
+
+# Calculate IRR using uniroot (R's root-finding function, similar to brentq)
+irr_result <- uniroot(npv_function, 
+                      interval = c(-0.99, 2.0), 
+                      cf = cash_flows)
+irr_value <- irr_result$root
+
+# Verify by calculating NPV at the IRR
+npv_at_irr <- npv_function(irr_value, cash_flows)
+
+# Calculate NPV at different discount rates to show the concept
+test_rates <- c(0.00, 0.05, 0.10, 0.15, irr_value, 0.20, 0.25)
+npv_at_rates <- sapply(test_rates, npv_function, cf = cash_flows)
+
+# Build output as a vector of strings
+output_lines <- c(
+  "",
+  paste(rep("=", 70), collapse = ""),
+  "INTERNAL RATE OF RETURN (IRR) CALCULATION",
+  paste(rep("=", 70), collapse = ""),
+  "",
+  "FREE CASH FLOWS:",
+  paste(rep("-", 70), collapse = "")
+)
+
+# Add cash flows
+for (i in 1:length(cash_flows)) {
+  output_lines <- c(output_lines, 
+                    sprintf("  Year %d: $%8.1f million", cf_df$Year[i], cash_flows[i]))
+}
+
+# Add IRR section
+output_lines <- c(output_lines,
+  "",
+  "INTERNAL RATE OF RETURN:",
+  paste(rep("=", 70), collapse = ""),
+  sprintf("  IRR = %.4f or %.2f%%", irr_value, irr_value * 100),
+  "",
+  "VERIFICATION:",
+  paste(rep("-", 70), collapse = ""),
+  sprintf("  NPV at IRR = $%.6f million ≈ $0", npv_at_irr),
+  "",
+  "NPV AT DIFFERENT DISCOUNT RATES:",
+  paste(rep("-", 70), collapse = ""),
+  "  Discount Rate    NPV ($ millions)",
+  paste("  ", paste(rep("-", 40), collapse = ""))
+)
+
+# Add NPV at different rates
+for (i in 1:length(test_rates)) {
+  rate <- test_rates[i]
+  npv <- npv_at_rates[i]
+  
+  if (abs(rate - irr_value) < 0.0001) {
+    output_lines <- c(output_lines,
+                      sprintf("  %6.2f%%         $%8.2f  ← IRR", rate * 100, npv))
+  } else {
+    output_lines <- c(output_lines,
+                      sprintf("  %6.2f%%         $%8.2f", rate * 100, npv))
+  }
+}
+
+# Compare to a 15% discount rate
+npv_15 <- npv_function(0.15, cash_flows)
+
+output_lines <- c(output_lines,
+  "",
+  "COMPARISON TO 15% DISCOUNT RATE:",
+  paste(rep("-", 70), collapse = "")
+)
+
+if (irr_value > 0.15) {
+  output_lines <- c(output_lines,
+    sprintf("  The IRR (%.2f%%) is GREATER than 15%%", irr_value * 100),
+    sprintf("  NPV at 15%% = $%.2f million (POSITIVE)", npv_15),
+    "  → The project should be ACCEPTED at a 15% discount rate"
+  )
+} else {
+  output_lines <- c(output_lines,
+    sprintf("  The IRR (%.2f%%) is LESS than 15%%", irr_value * 100),
+    sprintf("  NPV at 15%% = $%.2f million (NEGATIVE)", npv_15),
+    "  → The project should be REJECTED at a 15% discount rate"
+  )
+}
+
+# Display all output at once
+cat(paste(output_lines, collapse = "\n"), "\n")
+```
+
+\
+
+### Q2 Key Takeaways
+
+-   Cash flows are not accounting earnings. It is important to know the differences.
+-   In evaluating investment projects, we have to isolate the incremental flows from the project. Otherwise we might end up finding the value of the entire firm, which is a different question.
+-   Ignore sunk costs or money already spent. They are irrelevant for NPV.
+
+\pagebreak
+
+## Question 3
+
+In 1989, General Motors (GM) was evaluating the acquisition of Hughes Aircraft Corporation. Recognizing that the appropriate WACC for discounting the projected cash flows for Hughes was different from General Motors' WACC, GM assumed that Hughes was of approximately the same risk as Lockheed or Northrop which had low-risk defense contracts and products that were similar to those of Hughes. Specifically, assume:
+
+|          |           |      |
+|----------|-----------|------|
+| Firm     | $\beta_E$ | D/E  |
+| GM       | 1.20      | 0.40 |
+| Lockheed | 0.90      | 0.90 |
+| Northrop | 0.85      | 0.70 |
+
+-   GM's target D/E after acquisition of Hughes is 1
+-   Lockheed and Northrop maintain fixed levels of debt
+-   Hughes's expected after-tax real asset cash flow next year$=\$300$ million each year in perpetuity
+-   Corporate tax rate$=34\%$
+-   $r_m=11.75$ and $r_f=4\%$
+-   Debt is riskless, so that the appropriate $r_D=r_f$ and $\beta_D=0$.
+
+(a) Analyze the Hughes acquisition (which never took place) by first computing the betas of the comparison firms, Lockheed and Northrop, as if they were all equity financed (i.e. by unlevering the betas).
+
+(b) Compute $\beta_A$, the beta of the operating assets of the Hughes acquisition by taking the average of the betas of the operating assets of Lockheed and Northrop.
+
+(c) Compute the $\beta_E$ for the Hughes acquisition at the target debt level.
+
+(d) Compute the value of Hughes using the most appropriate method.
+
+(e) Now suppose that GM decides it does not have a target D/E ratio for the combined firm after the acquisition. Instead, GM plans to use \$3 billion of fixed perpetual debt as external financing for the acquisition. What method is now most appropriate for valuing Hughes? What is the value of Hughes using this method?\
+
+### Q3(a): Unlevering the betas
+
+::: callout-note
+#### Theoretical Background:
+
+[What is Beta]{.underline}?
+
+Beta ($\beta$) measures systematic risk - the sensitivity of an asset's returns to market returns. It quantifies how much an investment moves relative to the overall market.
+
+-   E*quity Beta* ($\beta_E$): Measures the risk of the equity (shares) of a levered firm. This includes both business risk and financial risk from leverage.
+-   Asset Beta ($\beta_A$): Measures only the business risk of the firm's operations, independent of its capital structure. Also called "unlevered beta."\
+
+[Why Unlevered Betas]{.underline}?
+
+When using comparable firms to estimate risk for a project or acquisition we need to take note the fact that different firms have different capital structures (debt/equity ratios). The observed equity beta usually includes the effect of each firm's specific leverage. So we want to isolate the business risk common to the industry. After finding the asset beta, we can re-lever it at our target capital structure.\
+
+[Methods for Unlevering]{.underline}
+
+There are two methods commonly used for unlevering. The first one is used when the firm maintains a target D/E ratio and adjusts debt levels as firm value changes. $$
+\text{Method 1:}\qquad \beta_A = \Big(\frac{E}{D+E}\times\beta_E\Big)+\Big(\frac{D}{D+E}\times\beta_D\Big)
+$$ When the firm maintains a fixed dollar amount of debt, then the same can be calculated using $$
+\text{Method 2:}\qquad \beta_A = \Big(\frac{E}{(1-\tau)D+E}\times\beta_E\Big)+\Big(\frac{(1-\tau)D}{(1-\tau)D+E}\times\beta_D\Big)
+$$
+
+When debt is fixed in dollar terms, the tax shield ($\tau\times D$) is more risky because it varies with firm value. As firm value fluctuates, the D/E ratio changes. We discount the tax shield at $r_A$ instead of $r_D$. This reduces the benefit of leverage, hence $(1-\tau)D$ term.\
+
+[Why Tax Shield is Riskier with Fixed Debt]{.underline}? Tax shield is the tax savings from deducting interest payments: $$
+\text{Tax Shield} = \underbrace{\text{tax rate}}_{\tau}\times\underbrace{\text{cost of debt}}_{r_D}\times\underbrace{\text{debt level}}_{D}
+$$ Consider a firm has fixed debt level. When the firm value drops, they suddenly find themselves in over-leveraged position, and when the firm value rises, it can find itself under-leveraged. MOre importantly, the tax shield depends on whether the firm has enough taxable income to use the deduction. In severe downturns, the firm might have no profits, making the tax shield worthless. The benefit varies with the firm's operating performance, so we must discount it at $r_A$, the risky asset rate, and not at $r_D$. Contrast this with a firm that has a target D/E ratio instead. Because of the target, the firm would be actively adjusting debt as firm value changes. When the firm does poorly, it pays down debt and when it does well, it borrows more. The tax shield still fluctuates with firm value but the firm is making deliberate financing decisions. The tax shield is relatively predictable because it is tied to the risk-free debt, not the firm's operating performance. We discount it at $r_D$.
+
+This matters for unlevering because when we unlever betas, we are trying to remove the leverage effect. The leverage effect comes from two sources: financial risk from debt obligations, which increases equity beta, and tax shield benefit, which reduces the effective debt burden.
+
+With target D/E (i.e. keeping leverage ratio steady), the tax shield $(\tau D)$ is very valuable. The net burden becomes $D-\tau D=(1\tau)D$ but this remains relatively predictable and safe. This is why we instead use the full debt weight D. With fixed debt (i.e. never adjusting the debt), on the other hand, the tax shield is less valuable and riskier. The effective debt for risk purposes is closer to $(1-\tau)D$. This is why we use the $(1-\tau)D$ adjustment. It reflects the fact that although the debt burden is reduced, it is not by the full $\tau D$ because that benefit is risky.
+:::
+
+In this question we are told that "Lockheed and Northrop maintain fixed levels of debt." Therefore we will adopt the second method.
+
+We are told that $\beta_D=0$ so our equation for $\beta_A$ becomes: $$
+\beta_A = \frac{E}{(1-\tau)D+E}\times\beta_E
+$$ But we are only given D/E values. So we need to adjust this by dividing both numerator and denominator by E: \begin{align*}
+\beta_A &= \frac{E\times\beta_E}{(1-\tau)D+E} \\
+&= \frac{\frac{1}{E}E\times\beta_E}{\frac{1}{E}\big((1-\tau)D+E\big)} \\
+&= \frac{\beta_E}{(1-\tau)\frac{D}{E}+1}
+\end{align*}
+
+Plugging the values for Lockheed and Northrop we get: \begin{align*}
+\beta_A^{\text{Lockheed}} &= \frac{0.9}{(1-0.34)0.90+1} = 0.565 \\[4pt]
+\beta_A^{\text{Northrop}} &= \frac{0.85}{(1-0.34)0.70+1} = 0.581
+\end{align*}
+
+Notice that both firms become less risky when unlevered. Lockheed's beta drops from 0.90 to 0.565, and Northrop's from 0.85 to 0.581. This demonstrates that financial leverage amplifies risk.
+
+The unlevered betas are also close to each other (0.565 vs 0.581) which may suggest that these firms have similar underlying business risk despite different leverage levels.
+
+Also notice that Lockheed has higher leverage than Northrop (D/E 0.90 vs 0.70) which explains why its equity beta is higher despite similar businesss operations.
+
+Finally, the $(1-\tau)$ term reduces the leverage effect because with fixed debt, the tax shield benefit is riskier than with target leverage.
+
+\
+
+###Q3(b): Calculating $\beta_A$ of Hughes via Comparable Firms
+
+In corporate finance, we often need to estimate the risk of a project, division, or acquisition target for which we don't have direct market data. Hughes Aircraft is a private company (or at least not being valued as a standalone public entity), so we can't directly observe its equity beta from stock market data.
+
+One way to resolve this is to use comparable publicly traded firms as proxies for the target's risk. Once we identify similar companies, we would unlever their betas as we did in part (a) to isolate business risk from their specific capital structure choices. We would then usually use the average of these unlevered betas as the estimate for the target's business risk.
+
+This approach of course assumes that the comparable firms face similar business risks as the target company and that they are exposed to the same market forces, competitive pressures, and cyclicality. Another assumption is that the average of comparables does provide a good central estimate.
+
+In the question we are told that "GM assumed that Hughes was of approximately the same risk as Lockheed or Northrop which had low-risk defense contracts and products that were similar to those of Hughes." Therefore, averaging their betas should give us a reasonable estimate of Hughes' business risk. By averaging, we hope to smooth out idiosyncratic differences between the comparables, reduce measurement error in any single beta estimate, and obtain a more representative industry estimate.
+
+Also note that, instead of taking a simple average, we could take a weighted average using market capitalizations as weights. In practice, unless there is a strong reason to weigh differently, simple averages are more common. $$
+\beta_A^{\text{Hughes}}=\frac{\beta_A^{\text{Lockheed}}+\beta_A^{Northrop}}{2}=\frac{0.565+0.581}{2}=0.573
+$$
+
+What $\beta_A^{\text{Hughes}}=0.573$ tell us is that Hughes' operating assets are less risky than the market portfolio since it is less than 1. This makes sense for defense contractors with long-term government contracts, which provide relatively stable cash flows.
+
+It also tells us that if Hughes was 100% equity financed, an investor would expect returns that move about 0.57 as much as the market.\
+
+### Q3(c): Hughes $\beta_E$ at target D/E level
+
+Financial leverage amplifies equity risk. When a firm takes on debt equity holders have a residual claim (paid after debt holders). This subordination increases the risk and required return on equity. The beta of equity must reflect this additional financial risk.
+
+Recall from the Theoretical Background in part (a) that if a company has a target D/E ratio then we use the first method. Also recall that $\beta_D=0$ because debt is riskless, meaning its return does not covary with the market: \begin{align*}
+\beta_A &= \Big(\frac{E}{D+E}\times\beta_E\Big)+\Big(\frac{D}{D+E}\times\beta_D\Big) \\[4pt]
+\beta_A &= \frac{E\times\beta_E}{D+E} \qquad\text{since } \beta_D=0 \\[4pt] 
+\beta_A &= \frac{\beta_E}{\frac{D}{E}+1} \\[4pt]
+\beta_A\times\Big(\frac{D}{E}+1\Big) &= \beta_E \\
+0.573\times(1+1) &= \beta_E^{\text{Hughes}} \\
+1.146 &= beta_E^{\text{Hughes}}
+\end{align*}
+
+The equity beta, $\beta_E=1.146$ doubles from asset beta, $\beta_A=0.573$, because with $D/E=1$, equity holders provide only half of the capital but they bear essentially all the business risk since debt is riskless. Therefore, equity risk per dollar invested doubles. The leverage factor $(1+D/E)$ captures this risk amplification.
+
+The equity beta $\beta_E=1.146$ also means Hughes's equity is more volatile than the market since it is higher than 1. So it will move on average 1.146% for every 1% market movement. Therefore it requires a higher expected return than the market to compensate for this risk.\
+
+### Q3(d): Value of Hughes when target D/E ratio - using WACC
+
+Since the acquirer, GM, has a target D/E ratio for the combined firm after the acquisition we should use WACC here. WACC method applies when
+
+1.  the firm maintains a target leverage ratio
+2.  capital structure adjusts to keep this ratio constant
+3.  we can calculate a single weighted-average cost of capital.
+
+We will look at what would happen if there isn't a target D/E ratio in part (e).
+
+To compute WACC, we will need all the inputs to the formula: $$
+WACC = \frac{E}{D + E}r_E + \frac{D}{D+E}(1 - \tau_C)r_D
+$$ where we weight cost of equity, $r_E$ by equity's proportion and weigh after tax cost of debt, $(1-\tau_C)r_D$ by debt's proportion. The tax shield benefit term ($1-\tau_C$) reduces the cost of debt.
+
+Since D/E is 1, then the proportions of equity and debt are both 0.5. Since debt is riskless, we also have $r_D=r_f=4\%$ as given in the question. So the only missing piece of input is the cost of equity, $r_E$, which we can calculate using CAPM: $$
+r_E = r_f + \beta_E(r_m - r_f) = 4\% + 1.146(11.7\% - 4\%) = 4\% + 1.146(7.7\%) = 4\% + 8.82\% = 12.82\%
+$$ Plugging these back into the WACC expression, we get: $$
+WACC=0.5(12.82\%) + 0.5(1 - 0.34)(4\%)=7.73\%
+$$ To find the present value, we then have to discount the cash flows at WACC. The firm is expected to have cash flows of \$300 million each year in perpetuity. So, $$
+PV=\frac{CF}{WACC}=\frac{300}{0.0773}=3.88\text{ billion}
+$$
+
+This \$3.88 billion valuation represents the present value of all future cash flows to all investors, i.e. both debt and equity holders. It is discounted at a rate reflecting the blended cost of capital and incorporates the value created by the tax deductibility of interest.
+
+Accordingly, this is the maximum GM should be willing to pay for Hughes - of course assuming the target $D/E=1$ is maintained, the comparison firms' risk profile is accurate, and the \$300 million cash flows are achievable.
+
+Also note what would happen without the tax shield. When there is no tax shield, the debt would contribute $0.5\times4\%=2\%$ to WACC. With tax shield, that contribution is only $0.5\times0.66\times4\%=1.32\%$. So tax shield saves $2-1.32=0.68\%$.\
+
+### Q3(e): Value of Hughes with Fixed Debt - using APV
+
+With fixed perpetual debt WACC is no longer appropriate. Instead we should use Adjusted Present Value (APV) method. The problem with WACC under fixed debt is that WACC assumes constant weights. With fixed debt, these weights inevitably change as firm value changes which means WACC is not constant over time. This is why WACC is not appropriate.
+
+| Target Leverage (Part d)     | Fixed Debt (Part e)         |
+|------------------------------|-----------------------------|
+| Debt adjusts with firm value | Debt stays constant at \$3B |
+| D/E ratio stays constant     | D/E ratio fluctuates        |
+| Use WACC                     | Use APV                     |
+| Method 1 for levering        | Method 2 for levering       |
+
+\
+
+[The APV Method]{.underline}
+
+The core idea of this method is that $$
+\text{Total Firm Value} = \text{Unlevered Firm Value} + \text{PV(Financing Side Effects)}
+$$
+
+Or: $$
+V^\text{total} = V^U + PV(\text{Tax Shield})
+$$ Accordingly, we separate operating value from financing value.\
+
+**Step 1: Value the Unlevered Firm**
+
+First, find the cost of capital for the unlevered assets using CAPM: \begin{align*}
+r_A &= r_f + \beta_A(r_m - r_f) \\
+&= 4\% + 0.573(11.7\% - 4\%) \\
+&= 8.41\%
+\end{align*}
+
+Then value the perpetual cash flows:
+
+$$V^U = \frac{CF}{r_A} = \frac{\$300 \text{ million}}{0.0841} = \$3.567 \text{ billion}$$\
+
+**Step 2: Value the Tax Shield**
+
+With fixed perpetual debt of \$3 billion: - Annual interest: $r_D × D = 4\% × \$3B = \$120$ million - Annual tax shield: $\tau_C × \text{Interest} = 0.34 \times \$120M = \$40.8$ million
+
+This is a perpetuity at the risk-free rate (since debt is riskless) \begin{align*}
+PV(\text{Tax Shield}) &= \frac{\tau_C \times r_D \times D}{r_D} \\
+&= \tau_C \times D \\
+&= 0.34 \times 3 \text{ billion} \\
+&= 1.02 \text{ billion}
+\end{align*}\
+
+**Step 3: Sum the Components** \begin{align*}
+V^\text{total} &= V^U + PV(\text{Tax Shield}) \\
+V^\text{total} &= 3.567B + 1.02B = 4.587 \text{ billion}
+\end{align*}\
+
+[Comparing the Methods]{.underline}
+
+| Method        | Debt Policy     | Firm Value | Difference |
+|---------------|-----------------|------------|------------|
+| WACC (part d) | Target D/E = 1  | \$3.88B    | Baseline   |
+| APV (part e)  | Fixed \$3B debt | \$4.587B   | +\$707M    |
+
+The implied leverage under APV is higher. If $V^\text{total}=3.587B$ and $D=3B$, then $E=1.587B$. This gives $D/E=3/1.587=1.89$ which is much higher than the target D/E of 1 in part (d).
+
+Higher leverage means larger tax shield benefits but also higher financial risk.\
+
+[The Intuition Behind APV]{.underline}
+
+*Why Separate Financing from Operations?*
+
+APV recognizes that value comes from two sources: 1. *Operating Value (VU)*: The cash-generating ability of assets 2. *Financing Value*: The tax benefits of debt financing\
+
+*The Tax Shield Calculation:* $$\tau_C \times D = 0.34 \times \$3B = \$1.02B$$
+
+This formula says that the government effectively subsidizes 34% of the debt. It is like getting \$1.02B in free capital from the tax system in perpetuity as long as debt remains outstanding.\
+
+*Risk Considerations:* - We discount $V^U$ at $r_A = 8.41\%$ (risky operating cash flows) - We discount the tax shield at $r_D = 4\%$ (as risky as the debt itself) - This different treatment reflects different risk levels\
+
+[When to Use Each Method]{.underline}
+
+We would use WACC when firm maintains target leverage ratio, the capital structure rebalances regularly, and when we have a single discount rate for simplicity.
+
+We would use APV when the debt is fixed in dollar terms, when there are complex financing arrangements in place, when we want to separately value financing effects, or when leverage changes significantly over time.\
+
+[Practical Implications for GM]{.underline}
+
+GM must choose between *target leverage* which is more flexible but lower value (\$3.88B), and *fixed debt*,which is higher value (\$4.587B), but there is less flexibility to adjust capital structure, higher financial risk if cash flows disappoint, and may violate debt covenants if values fluctuate.
+
+The choice will largely depend on GM's confidence in cash flow projections, desire for financial flexibility, risk tolerance, and credit market conditions.
+
+------------------------------------------------------------------------
+
+### Q3 Key Takeaways
+
+[Methodological Lessons]{.underline}
+
+1.  *Leverage method depends on debt policy*:
+    -   Target ratios $\rightarrow$ Method 1 (rebalancing)
+    -   Fixed debt $\rightarrow$ Method 2 (fixed leverage)
+2.  *Valuation method depends on debt policy*:
+    -   Target ratios $\rightarrow$ WACC
+    -   Fixed debt $\rightarrow$ APV
+3.  *Both methods should give same answer if assumptions are consistent*\
+
+[Practical Insights]{.underline}
+
+1.  *Risk increases with leverage*:
+    -   $\beta_E$ grows with D/E ratio
+    -   Required equity returns increase
+    -   But tax shields create value
+2.  *Tax shields are valuable*:
+    -   Worth \$1.02B on \$3B debt (34% of debt value)
+    -   This is "free money" from the government
+    -   But requires maintaining debt (and taxable income)
+3.  *Valuation is sensitive to assumptions*:
+    -   Debt policy choice: \$3.88B vs. \$4.587B
+    -   18% difference in value
+    -   Highlights importance of correctly specifying capital structure
